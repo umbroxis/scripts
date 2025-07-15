@@ -561,6 +561,438 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- ═══════════════════════════════════════════════════════════════
+--                           INTERFAZ GRÁFICA ULTRA
+-- ═══════════════════════════════════════════════════════════════
+
+local function createUltraGUI()
+    -- Crear ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "TweenStealQuantumUltraGUI"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.DisplayOrder = 999999
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+    -- Frame principal
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Parent = ScreenGui
+    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MainFrame.Size = UDim2.new(0, 550, 0, 480)
+    MainFrame.ClipsDescendants = true
+
+    -- Esquinas redondeadas
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 20)
+    UICorner.Parent = MainFrame
+
+    -- Gradiente de fondo
+    local UIGradient = Instance.new("UIGradient")
+    UIGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 40)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+    })
+    UIGradient.Rotation = 45
+    UIGradient.Parent = MainFrame
+
+    -- Sombra
+    local Shadow = Instance.new("ImageLabel")
+    Shadow.Name = "Shadow"
+    Shadow.Parent = MainFrame
+    Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    Shadow.BackgroundTransparency = 1
+    Shadow.Position = UDim2.new(0.5, 0, 0.5, 8)
+    Shadow.Size = UDim2.new(1, 30, 1, 30)
+    Shadow.Image = "rbxassetid://6014261993"
+    Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    Shadow.ImageTransparency = 0.4
+    Shadow.ScaleType = Enum.ScaleType.Slice
+    Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    Shadow.ZIndex = -1
+
+    -- Barra de título
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.Parent = MainFrame
+    TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Size = UDim2.new(1, 0, 0, 50)
+    TitleBar.ZIndex = 2
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 20)
+    TitleCorner.Parent = TitleBar
+
+    -- Título
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "Title"
+    TitleLabel.Parent = TitleBar
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Size = UDim2.new(1, -100, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 20, 0, 0)
+    TitleLabel.Font = Enum.Font.GothamBlack
+    TitleLabel.Text = "🚀 TWEEN STEAL QUANTUM ULTRA V3.0"
+    TitleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    TitleLabel.TextSize = 18
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Botón cerrar
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.Parent = TitleBar
+    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    CloseButton.Position = UDim2.new(1, -40, 0, 10)
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Text = "✕"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 16
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(1, 0)
+    CloseCorner.Parent = CloseButton
+
+    -- Contenido principal
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Name = "Content"
+    ContentFrame.Parent = MainFrame
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Position = UDim2.new(0, 0, 0, 50)
+    ContentFrame.Size = UDim2.new(1, 0, 1, -50)
+
+    -- Botón principal EJECUTAR
+    local ExecuteButton = Instance.new("TextButton")
+    ExecuteButton.Name = "ExecuteButton"
+    ExecuteButton.Parent = ContentFrame
+    ExecuteButton.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    ExecuteButton.Position = UDim2.new(0.1, 0, 0.05, 0)
+    ExecuteButton.Size = UDim2.new(0.8, 0, 0, 60)
+    ExecuteButton.Font = Enum.Font.GothamBold
+    ExecuteButton.Text = "🚀 EJECUTAR TWEEN STEAL QUANTUM ULTRA"
+    ExecuteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ExecuteButton.TextSize = 18
+    ExecuteButton.AutoButtonColor = false
+
+    local ExecuteCorner = Instance.new("UICorner")
+    ExecuteCorner.CornerRadius = UDim.new(0, 15)
+    ExecuteCorner.Parent = ExecuteButton
+
+    local ExecuteStroke = Instance.new("UIStroke")
+    ExecuteStroke.Parent = ExecuteButton
+    ExecuteStroke.Color = Color3.fromRGB(100, 200, 255)
+    ExecuteStroke.Thickness = 2
+
+    -- Label de estado
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Name = "StatusLabel"
+    StatusLabel.Parent = ContentFrame
+    StatusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    StatusLabel.Position = UDim2.new(0.1, 0, 0.22, 0)
+    StatusLabel.Size = UDim2.new(0.8, 0, 0, 50)
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Text = "💤 Listo para ejecutar..."
+    StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    StatusLabel.TextSize = 16
+    StatusLabel.TextWrapped = true
+
+    local StatusCorner = Instance.new("UICorner")
+    StatusCorner.CornerRadius = UDim.new(0, 10)
+    StatusCorner.Parent = StatusLabel
+
+    -- Frame de estadísticas
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Name = "StatsFrame"
+    StatsFrame.Parent = ContentFrame
+    StatsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    StatsFrame.Position = UDim2.new(0.1, 0, 0.38, 0)
+    StatsFrame.Size = UDim2.new(0.8, 0, 0, 120)
+
+    local StatsCorner = Instance.new("UICorner")
+    StatsCorner.CornerRadius = UDim.new(0, 10)
+    StatsCorner.Parent = StatsFrame
+
+    local StatsTitle = Instance.new("TextLabel")
+    StatsTitle.Name = "StatsTitle"
+    StatsTitle.Parent = StatsFrame
+    StatsTitle.BackgroundTransparency = 1
+    StatsTitle.Size = UDim2.new(1, 0, 0, 30)
+    StatsTitle.Font = Enum.Font.GothamBold
+    StatsTitle.Text = "📊 ESTADÍSTICAS"
+    StatsTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
+    StatsTitle.TextSize = 16
+
+    local AttemptsLabel = Instance.new("TextLabel")
+    AttemptsLabel.Name = "AttemptsLabel"
+    AttemptsLabel.Parent = StatsFrame
+    AttemptsLabel.BackgroundTransparency = 1
+    AttemptsLabel.Position = UDim2.new(0, 10, 0, 30)
+    AttemptsLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    AttemptsLabel.Font = Enum.Font.Gotham
+    AttemptsLabel.Text = "🎯 Intentos: 0"
+    AttemptsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    AttemptsLabel.TextSize = 14
+    AttemptsLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local SuccessLabel = Instance.new("TextLabel")
+    SuccessLabel.Name = "SuccessLabel"
+    SuccessLabel.Parent = StatsFrame
+    SuccessLabel.BackgroundTransparency = 1
+    SuccessLabel.Position = UDim2.new(0.5, 0, 0, 30)
+    SuccessLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    SuccessLabel.Font = Enum.Font.Gotham
+    SuccessLabel.Text = "✅ Éxitos: 0"
+    SuccessLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    SuccessLabel.TextSize = 14
+    SuccessLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local RateLabel = Instance.new("TextLabel")
+    RateLabel.Name = "RateLabel"
+    RateLabel.Parent = StatsFrame
+    RateLabel.BackgroundTransparency = 1
+    RateLabel.Position = UDim2.new(0, 10, 0, 50)
+    RateLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    RateLabel.Font = Enum.Font.Gotham
+    RateLabel.Text = "📈 Tasa: 0%"
+    RateLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    RateLabel.TextSize = 14
+    RateLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local TimeLabel = Instance.new("TextLabel")
+    TimeLabel.Name = "TimeLabel"
+    TimeLabel.Parent = StatsFrame
+    TimeLabel.BackgroundTransparency = 1
+    TimeLabel.Position = UDim2.new(0.5, 0, 0, 50)
+    TimeLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    TimeLabel.Font = Enum.Font.Gotham
+    TimeLabel.Text = "⏱️ Último: 0s"
+    TimeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TimeLabel.TextSize = 14
+    TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local BestLabel = Instance.new("TextLabel")
+    BestLabel.Name = "BestLabel"
+    BestLabel.Parent = StatsFrame
+    BestLabel.BackgroundTransparency = 1
+    BestLabel.Position = UDim2.new(0, 10, 0, 70)
+    BestLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    BestLabel.Font = Enum.Font.Gotham
+    BestLabel.Text = "⚡ Mejor: 0s"
+    BestLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    BestLabel.TextSize = 14
+    BestLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local AvgLabel = Instance.new("TextLabel")
+    AvgLabel.Name = "AvgLabel"
+    AvgLabel.Parent = StatsFrame
+    AvgLabel.BackgroundTransparency = 1
+    AvgLabel.Position = UDim2.new(0.5, 0, 0, 70)
+    AvgLabel.Size = UDim2.new(0.5, -10, 0, 20)
+    AvgLabel.Font = Enum.Font.Gotham
+    AvgLabel.Text = "📊 Promedio: 0s"
+    AvgLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    AvgLabel.TextSize = 14
+    AvgLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Botones de configuración
+    local ConfigFrame = Instance.new("Frame")
+    ConfigFrame.Name = "ConfigFrame"
+    ConfigFrame.Parent = ContentFrame
+    ConfigFrame.BackgroundTransparency = 1
+    ConfigFrame.Position = UDim2.new(0.1, 0, 0.7, 0)
+    ConfigFrame.Size = UDim2.new(0.8, 0, 0, 80)
+
+    local StatsButton = Instance.new("TextButton")
+    StatsButton.Name = "StatsButton"
+    StatsButton.Parent = ConfigFrame
+    StatsButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+    StatsButton.Position = UDim2.new(0, 0, 0, 0)
+    StatsButton.Size = UDim2.new(0.48, -5, 0, 35)
+    StatsButton.Font = Enum.Font.Gotham
+    StatsButton.Text = "📊 Actualizar Stats"
+    StatsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StatsButton.TextSize = 14
+
+    local StatsButtonCorner = Instance.new("UICorner")
+    StatsButtonCorner.CornerRadius = UDim.new(0, 8)
+    StatsButtonCorner.Parent = StatsButton
+
+    local HelpButton = Instance.new("TextButton")
+    HelpButton.Name = "HelpButton"
+    HelpButton.Parent = ConfigFrame
+    HelpButton.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
+    HelpButton.Position = UDim2.new(0.52, 5, 0, 0)
+    HelpButton.Size = UDim2.new(0.48, -5, 0, 35)
+    HelpButton.Font = Enum.Font.Gotham
+    HelpButton.Text = "❓ Ayuda"
+    HelpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    HelpButton.TextSize = 14
+
+    local HelpButtonCorner = Instance.new("UICorner")
+    HelpButtonCorner.CornerRadius = UDim.new(0, 8)
+    HelpButtonCorner.Parent = HelpButton
+
+    local ControlsLabel = Instance.new("TextLabel")
+    ControlsLabel.Name = "ControlsLabel"
+    ControlsLabel.Parent = ConfigFrame
+    ControlsLabel.BackgroundTransparency = 1
+    ControlsLabel.Position = UDim2.new(0, 0, 0, 45)
+    ControlsLabel.Size = UDim2.new(1, 0, 0, 30)
+    ControlsLabel.Font = Enum.Font.Gotham
+    ControlsLabel.Text = "🎮 Controles: T=Ejecutar | G=Stats | H=Ayuda"
+    ControlsLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    ControlsLabel.TextSize = 12
+
+    -- Función para actualizar estadísticas en la GUI
+    local function updateStatsGUI()
+        local successRate = performanceData.attempts > 0 and (performanceData.successes / performanceData.attempts * 100) or 0
+        
+        AttemptsLabel.Text = string.format("🎯 Intentos: %d", performanceData.attempts)
+        SuccessLabel.Text = string.format("✅ Éxitos: %d", performanceData.successes)
+        RateLabel.Text = string.format("📈 Tasa: %.1f%%", successRate)
+        TimeLabel.Text = string.format("⏱️ Último: %.2fs", performanceData.lastExecutionTime)
+        BestLabel.Text = string.format("⚡ Mejor: %.2fs", performanceData.bestTime == math.huge and 0 or performanceData.bestTime)
+        AvgLabel.Text = string.format("📊 Promedio: %.2fs", performanceData.avgTime)
+        
+        -- Cambiar color basado en tasa de éxito
+        if successRate >= 80 then
+            RateLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        elseif successRate >= 50 then
+            RateLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        else
+            RateLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    end
+
+    -- Función para actualizar estado
+    local function updateStatus(message, color)
+        StatusLabel.Text = message
+        StatusLabel.TextColor3 = color or Color3.fromRGB(150, 150, 150)
+        
+        -- Efecto de parpadeo
+        TweenService:Create(StatusLabel, TweenInfo.new(0.2), {
+            TextTransparency = 0.3
+        }):Play()
+        
+        task.wait(0.2)
+        
+        TweenService:Create(StatusLabel, TweenInfo.new(0.2), {
+            TextTransparency = 0
+        }):Play()
+    end
+
+    -- Eventos de botones
+    ExecuteButton.MouseButton1Click:Connect(function()
+        if isExecuting then
+            updateStatus("⚠️ Ya se está ejecutando...", Color3.fromRGB(255, 200, 100))
+            return
+        end
+        
+        updateStatus("🚀 Iniciando TweenSteal Quantum Ultra...", Color3.fromRGB(100, 200, 255))
+        
+        task.spawn(function()
+            local success = TweenStealQuantumUltra()
+            updateStatsGUI()
+            
+            if success then
+                updateStatus("✅ ¡Ejecutado exitosamente!", Color3.fromRGB(100, 255, 100))
+            else
+                updateStatus("❌ Ejecución falló", Color3.fromRGB(255, 100, 100))
+            end
+        end)
+    end)
+
+    StatsButton.MouseButton1Click:Connect(function()
+        updateStatsGUI()
+        updateStatus("📊 Estadísticas actualizadas", Color3.fromRGB(100, 200, 255))
+    end)
+
+    HelpButton.MouseButton1Click:Connect(function()
+        updateStatus("❓ Revisa la consola para ayuda", Color3.fromRGB(200, 100, 255))
+        showStats()
+    end)
+
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
+    -- Efectos hover para botones
+    local function addHoverEffect(button, hoverColor, normalColor)
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundColor3 = hoverColor,
+                Size = button.Size + UDim2.new(0, 0, 0, 2)
+            }):Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundColor3 = normalColor,
+                Size = button.Size - UDim2.new(0, 0, 0, 2)
+            }):Play()
+        end)
+    end
+
+    addHoverEffect(ExecuteButton, Color3.fromRGB(70, 170, 255), Color3.fromRGB(50, 150, 255))
+    addHoverEffect(StatsButton, Color3.fromRGB(100, 140, 220), Color3.fromRGB(80, 120, 200))
+    addHoverEffect(HelpButton, Color3.fromRGB(140, 100, 220), Color3.fromRGB(120, 80, 200))
+    addHoverEffect(CloseButton, Color3.fromRGB(255, 100, 100), Color3.fromRGB(255, 80, 80))
+
+    -- Hacer draggable
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    -- Animación de entrada
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    MainFrame.BackgroundTransparency = 1
+    
+    TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 550, 0, 480),
+        BackgroundTransparency = 0
+    }):Play()
+
+    -- Actualizar estadísticas iniciales
+    updateStatsGUI()
+    
+    print("🎮 GUI de TweenSteal Quantum Ultra cargada exitosamente!")
+    return ScreenGui, updateStatus, updateStatsGUI
+end
+
+-- ═══════════════════════════════════════════════════════════════
 --                           INICIALIZACIÓN
 -- ═══════════════════════════════════════════════════════════════
 
@@ -579,9 +1011,18 @@ print("║  • Anti-detección avanzada                                  ║")
 print("║  • Optimización automática                                  ║")
 print("║  • Teleport en ráfagas múltiples                           ║")
 print("║  • Sistema de estadísticas                                  ║")
+print("║  • Interfaz gráfica completa                                ║")
 print("╚══════════════════════════════════════════════════════════════╝")
 
--- Auto-ejecutar una vez para demostrar (opcional, comentar si no se desea)
--- task.wait(2)
--- print("🎯 Ejecutando demostración automática...")
--- TweenStealQuantumUltra() 
+-- Crear y mostrar la GUI
+local gui, updateStatusGUI, updateStatsGUI = createUltraGUI()
+
+-- Actualizar la función principal para usar la GUI
+local originalTweenSteal = TweenStealQuantumUltra
+TweenStealQuantumUltra = function()
+    local result = originalTweenSteal()
+    if updateStatsGUI then
+        updateStatsGUI()
+    end
+    return result
+end 
