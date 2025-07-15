@@ -6,22 +6,6 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local key = "moon"
-local discordLink = "https://discord.gg/EXK4dQxJBv"
-local scriptToLoad = [[
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local player = Players.LocalPlayer
-local random = Random.new()
-
---// Configuration
-local DEBUG = false
-local tpAmt
-local void = CFrame.new(0, -3.4028234663852886e+38, 0)
-local teleporting
 
 local function DebugInfo(mode, content, value)
     if not DEBUG then return end
@@ -278,14 +262,20 @@ local function TweenSteal(statusLabel)
     end
 
     local function findDeliverySpot()
-        for _, v in ipairs(workspace.Plots:GetDescendants()) do
-            if v.Name == "DeliveryHitbox" and v.Parent:FindFirstChild("PlotSign") then
-                if v.Parent.PlotSign:FindFirstChild("YourBase") and v.Parent.PlotSign.YourBase.Enabled then
+        local plots = workspace:FindFirstChild("Plots")
+        if not plots then
+            DebugInfo("warn", "No existe 'Plots' en Workspace", nil)
+            return nil
+        end
+        for _, v in ipairs(plots:GetDescendants()) do
+            if v.Name == "DeliveryHitbox" and v.Parent and v.Parent:FindFirstChild("PlotSign") then
+                local plotSign = v.Parent.PlotSign
+                if plotSign:FindFirstChild("YourBase") and plotSign.YourBase.Enabled then
                     return v
                 end
             end
         end
-        DebugInfo("warn", "No valid DeliveryHitbox found for TweenSteal", nil)
+        DebugInfo("warn", "No se encontró DeliveryHitbox válido para TweenSteal", nil)
         return nil
     end
 
