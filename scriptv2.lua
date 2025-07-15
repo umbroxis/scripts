@@ -6,7 +6,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local key = "moon"
+local key = "arbix hub"
 local discordLink = "https://discord.gg/EXK4dQxJBv"
 local scriptToLoad = [[
 local Players = game:GetService("Players")
@@ -277,6 +277,288 @@ local function TweenSteal(statusLabel)
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
 end
 
+local function HumanizedSteal(statusLabel)
+    statusLabel.Text = "Iniciando vuelo humanizado..."
+    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+
+    local function isCharacterValid()
+        return char and char.Parent and hrp and hrp.Parent and humanoid and humanoid.Parent
+    end
+
+    local function findDeliveryHitbox()
+        for _, v in ipairs(workspace.Plots:GetDescendants()) do
+            if v.Name == "DeliveryHitbox" and v.Parent:FindFirstChild("PlotSign") then
+                if v.Parent.PlotSign:FindFirstChild("YourBase") and v.Parent.PlotSign.YourBase.Enabled then
+                    return v
+                end
+            end
+        end
+        return nil
+    end
+
+    local function humanizedFlight(targetPosition)
+        if not isCharacterValid() or not targetPosition then return false end
+        
+        -- Configuración de vuelo humanizado
+        local startPos = hrp.Position
+        local distance = (targetPosition - startPos).Magnitude
+        local flightTime = math.clamp(distance / 35, 2, 8) -- Velocidad humana: 35 studs/sec
+        
+                 -- Crear BodyVelocity para movimiento suave
+         local bodyVelocity = Instance.new("BodyVelocity")
+         bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+         bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+         bodyVelocity.Parent = hrp
+         
+         -- Crear BodyAngularVelocity para rotación suave durante el vuelo
+         local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+         bodyAngularVelocity.MaxTorque = Vector3.new(0, 2000, 0)
+         bodyAngularVelocity.AngularVelocity = Vector3.new(0, 0, 0)
+         bodyAngularVelocity.Parent = hrp
+         
+         -- Crear efecto visual de vuelo (trail suave)
+         local trailPart = Instance.new("Part")
+         trailPart.Name = "FlightTrail"
+         trailPart.Size = Vector3.new(0.1, 0.1, 0.1)
+         trailPart.Material = Enum.Material.Neon
+         trailPart.BrickColor = BrickColor.new("Cyan")
+         trailPart.CanCollide = false
+         trailPart.Anchored = true
+         trailPart.Transparency = 0.7
+         trailPart.Parent = workspace
+         
+         local trail = Instance.new("Trail")
+         trail.Color = ColorSequence.new(Color3.fromRGB(100, 255, 200))
+         trail.Transparency = NumberSequence.new({
+             NumberSequenceKeypoint.new(0, 0.5),
+             NumberSequenceKeypoint.new(1, 1)
+         })
+         trail.Lifetime = 1.5
+         trail.MinLength = 0
+         trail.FaceCamera = true
+         
+         local attachment0 = Instance.new("Attachment")
+         attachment0.Parent = hrp
+         local attachment1 = Instance.new("Attachment")
+         attachment1.Parent = trailPart
+         
+         trail.Attachment0 = attachment0
+         trail.Attachment1 = attachment1
+         trail.Parent = hrp
+        
+        -- Altura de vuelo aleatoria para parecer más humano
+        local flightHeight = startPos.Y + random:NextNumber(15, 30)
+        local waypoints = {}
+        
+        -- Crear waypoints con curvas naturales
+        local numWaypoints = math.clamp(math.floor(distance / 50), 3, 8)
+        for i = 1, numWaypoints do
+            local progress = i / numWaypoints
+            local basePoint = startPos:Lerp(targetPosition, progress)
+            
+            -- Añadir variación natural
+            local offset = Vector3.new(
+                random:NextNumber(-15, 15) * math.sin(progress * math.pi),
+                flightHeight + random:NextNumber(-5, 5),
+                random:NextNumber(-15, 15) * math.cos(progress * math.pi)
+            )
+            
+            waypoints[i] = Vector3.new(basePoint.X + offset.X, offset.Y, basePoint.Z + offset.Z)
+        end
+        
+        -- Movimiento por waypoints
+                 for i, waypoint in ipairs(waypoints) do
+             if not isCharacterValid() then 
+                 bodyVelocity:Destroy()
+                 if bodyAngularVelocity and bodyAngularVelocity.Parent then
+                     bodyAngularVelocity:Destroy()
+                 end
+                 -- Limpiar efectos visuales inmediatamente en caso de error
+                 if trail and trail.Parent then trail:Destroy() end
+                 if attachment0 and attachment0.Parent then attachment0:Destroy() end
+                 if attachment1 and attachment1.Parent then attachment1:Destroy() end
+                 if trailPart and trailPart.Parent then trailPart:Destroy() end
+                 return false 
+             end
+            
+            statusLabel.Text = "Volando... (" .. i .. "/" .. #waypoints .. ")"
+            TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+            
+                         local currentPos = hrp.Position
+             local direction = (waypoint - currentPos).Unit
+             local waypointDistance = (waypoint - currentPos).Magnitude
+             
+             -- Calcular velocidad con aceleración/desaceleración natural
+             local baseSpeed = math.clamp(waypointDistance / 1.5, 20, 45)
+             local speedMultiplier = 1
+             
+             -- Acelerar al inicio, desacelerar al final
+             if i == 1 then
+                 speedMultiplier = 0.6 -- Inicio suave
+             elseif i == #waypoints then
+                 speedMultiplier = 0.4 -- Final suave
+             end
+             
+             local targetVelocity = direction * (baseSpeed * speedMultiplier)
+             
+             -- Calcular rotación suave hacia la dirección de vuelo
+             local lookDirection = direction
+             local currentLookVector = hrp.CFrame.LookVector
+             local rotationSpeed = 0.5 + (speedMultiplier * 0.3)
+             
+             -- Suave rotación Y para seguir la dirección de vuelo
+             if lookDirection.Magnitude > 0 then
+                 local targetRotationY = math.atan2(lookDirection.X, lookDirection.Z)
+                 local currentRotationY = math.atan2(currentLookVector.X, currentLookVector.Z)
+                 local rotationDiff = targetRotationY - currentRotationY
+                 
+                 -- Normalizar el ángulo
+                 if rotationDiff > math.pi then rotationDiff = rotationDiff - 2 * math.pi end
+                 if rotationDiff < -math.pi then rotationDiff = rotationDiff + 2 * math.pi end
+                 
+                 bodyAngularVelocity.AngularVelocity = Vector3.new(0, rotationDiff * rotationSpeed, 0)
+             end
+            
+                         -- Aplicar velocidad gradualmente
+             local steps = 20
+             for step = 1, steps do
+                 if not isCharacterValid() then break end
+                 
+                 local stepProgress = step / steps
+                 local currentVelocity = bodyVelocity.Velocity:Lerp(targetVelocity, stepProgress * 0.3)
+                 bodyVelocity.Velocity = currentVelocity
+                 
+                 -- Actualizar posición del trail
+                 if trailPart and trailPart.Parent then
+                     trailPart.Position = hrp.Position + Vector3.new(0, -1, 0)
+                 end
+                 
+                 task.wait(0.05)
+                 
+                 -- Verificar si llegamos al waypoint
+                 if (hrp.Position - waypoint).Magnitude < 8 then
+                     break
+                 end
+             end
+            
+            -- Esperar a llegar cerca del waypoint
+            local timeout = 0
+            while (hrp.Position - waypoint).Magnitude > 12 and timeout < 60 and isCharacterValid() do
+                task.wait(0.1)
+                timeout = timeout + 1
+            end
+        end
+        
+        -- Descenso final suave
+        if isCharacterValid() then
+            statusLabel.Text = "Aterrizaje final..."
+            TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+            
+            local finalTarget = Vector3.new(targetPosition.X, targetPosition.Y, targetPosition.Z)
+            local downwardVelocity = Vector3.new(0, -20, 0)
+            
+            for i = 1, 30 do
+                if not isCharacterValid() then break end
+                
+                bodyVelocity.Velocity = bodyVelocity.Velocity:Lerp(downwardVelocity, 0.1)
+                task.wait(0.05)
+                
+                if (hrp.Position - finalTarget).Magnitude < 5 then
+                    break
+                end
+            end
+        end
+        
+                 -- Limpiar objetos de vuelo
+         if bodyVelocity and bodyVelocity.Parent then
+             bodyVelocity:Destroy()
+         end
+         if bodyAngularVelocity and bodyAngularVelocity.Parent then
+             bodyAngularVelocity:Destroy()
+         end
+         
+         -- Limpiar efectos visuales después de un delay
+         task.spawn(function()
+             task.wait(2)
+             if trail and trail.Parent then
+                 trail:Destroy()
+             end
+             if attachment0 and attachment0.Parent then
+                 attachment0:Destroy()
+             end
+             if attachment1 and attachment1.Parent then
+                 attachment1:Destroy()
+             end
+             if trailPart and trailPart.Parent then
+                 trailPart:Destroy()
+             end
+         end)
+        
+        return isCharacterValid()
+    end
+
+    -- Verificar estado inicial
+    if not isCharacterValid() then
+        statusLabel.Text = "Error: Personaje no válido"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        task.wait(2)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        return
+    end
+
+    -- Buscar delivery hitbox
+    local delivery = findDeliveryHitbox()
+    if not delivery then
+        statusLabel.Text = "Error: No se encontró DeliveryHitbox"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        task.wait(2)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        return
+    end
+
+    DebugInfo("print", "DeliveryHitbox found for humanized flight", delivery)
+    
+    statusLabel.Text = "Preparando vuelo..."
+    TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+
+    -- Posición objetivo
+    local targetPosition = delivery.Position + Vector3.new(
+        random:NextNumber(-2, 2),
+        random:NextNumber(-3, -1),
+        random:NextNumber(-2, 2)
+    )
+    
+    -- Ejecutar vuelo humanizado
+    task.wait(0.5)
+    local success = humanizedFlight(targetPosition)
+    
+    -- Verificar resultado
+    task.wait(0.3)
+    
+    if isCharacterValid() then
+        local finalDistance = (hrp.Position - delivery.Position).Magnitude
+        
+        if finalDistance <= 25 then
+            DebugInfo("print", "Humanized flight succeeded", finalDistance)
+            statusLabel.Text = "¡Vuelo Humanizado Exitoso! ✓"
+            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+        else
+            statusLabel.Text = "Vuelo completado (dist: " .. math.floor(finalDistance) .. "m)"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        end
+    else
+        statusLabel.Text = "Error: Vuelo interrumpido"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+    
+    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    task.wait(3)
+    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ArbixTPGui"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -404,11 +686,11 @@ TweenStealButton.Name = "TweenStealButton"
 TweenStealButton.Parent = Content
 TweenStealButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 TweenStealButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TweenStealButton.Position = UDim2.new(0.1, 0, 0.25, 0)
-TweenStealButton.Size = UDim2.new(0.8, 0, 0, 50)
+TweenStealButton.Position = UDim2.new(0.05, 0, 0.15, 0)
+TweenStealButton.Size = UDim2.new(0.42, 0, 0, 50)
 TweenStealButton.Font = Enum.Font.GothamSemibold
 TweenStealButton.Text = "TWEEN STEAL"
-TweenStealButton.TextSize = 18
+TweenStealButton.TextSize = 16
 TweenStealButton.TextWrapped = true
 TweenStealButton.TextTransparency = 1
 TweenStealButton.AutoButtonColor = false
@@ -423,12 +705,49 @@ TweenStealStroke.Color = Color3.fromRGB(0, 80, 200)
 TweenStealStroke.Thickness = 2
 TweenStealStroke.Transparency = 0.5
 
+local HumanizedButton = Instance.new("TextButton")
+HumanizedButton.Name = "HumanizedButton"
+HumanizedButton.Parent = Content
+HumanizedButton.BackgroundColor3 = Color3.fromRGB(0, 200, 120)
+HumanizedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HumanizedButton.Position = UDim2.new(0.53, 0, 0.15, 0)
+HumanizedButton.Size = UDim2.new(0.42, 0, 0, 50)
+HumanizedButton.Font = Enum.Font.GothamSemibold
+HumanizedButton.Text = "HUMANITED"
+HumanizedButton.TextSize = 16
+HumanizedButton.TextWrapped = true
+HumanizedButton.TextTransparency = 1
+HumanizedButton.AutoButtonColor = false
+
+local UICorner_Humanized = Instance.new("UICorner")
+UICorner_Humanized.CornerRadius = UDim.new(0, 12)
+UICorner_Humanized.Parent = HumanizedButton
+
+local HumanizedStroke = Instance.new("UIStroke")
+HumanizedStroke.Parent = HumanizedButton
+HumanizedStroke.Color = Color3.fromRGB(0, 150, 80)
+HumanizedStroke.Thickness = 2
+HumanizedStroke.Transparency = 0.5
+
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Name = "InfoLabel"
+InfoLabel.Parent = Content
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Size = UDim2.new(0.9, 0, 0, 40)
+InfoLabel.Position = UDim2.new(0.05, 0, 0.35, 0)
+InfoLabel.Font = Enum.Font.Gotham
+InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+InfoLabel.TextSize = 12
+InfoLabel.TextTransparency = 1
+InfoLabel.Text = "TWEEN STEAL: Rápido y directo | HUMANITED: Vuelo natural y seguro"
+InfoLabel.TextWrapped = true
+
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Name = "StatusLabel"
 StatusLabel.Parent = Content
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Size = UDim2.new(0.8, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0.1, 0, 0.55, 0)
+StatusLabel.Size = UDim2.new(0.9, 0, 0, 30)
+StatusLabel.Position = UDim2.new(0.05, 0, 0.75, 0)
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 StatusLabel.TextSize = 14
@@ -436,38 +755,44 @@ StatusLabel.TextTransparency = 1
 StatusLabel.Text = ""
 StatusLabel.TextWrapped = true
 
-local function createHoverEffect(button, stroke)
+local function createHoverEffect(button, stroke, normalBg, hoverBg, normalStroke, hoverStroke)
     button.MouseEnter:Connect(function()
         TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 140, 255),
+            BackgroundColor3 = hoverBg,
             TextColor3 = Color3.fromRGB(255, 255, 255)
         }):Play()
         TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 100, 220),
+            Color = hoverStroke,
             Thickness = 3,
             Transparency = 0.2
         }):Play()
     end)
     button.MouseLeave:Connect(function()
         TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 120, 255),
+            BackgroundColor3 = normalBg,
             TextColor3 = Color3.fromRGB(255, 255, 255)
         }):Play()
         TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 80, 200),
+            Color = normalStroke,
             Thickness = 2,
             Transparency = 0.5
         }):Play()
     end)
 end
 
-createHoverEffect(TweenStealButton, TweenStealStroke)
+createHoverEffect(TweenStealButton, TweenStealStroke, 
+    Color3.fromRGB(0, 120, 255), Color3.fromRGB(0, 140, 255),
+    Color3.fromRGB(0, 80, 200), Color3.fromRGB(0, 100, 220))
+
+createHoverEffect(HumanizedButton, HumanizedStroke,
+    Color3.fromRGB(0, 200, 120), Color3.fromRGB(0, 220, 140),
+    Color3.fromRGB(0, 150, 80), Color3.fromRGB(0, 170, 100))
 
 -- Initial animation
 task.wait(0.1)
 TweenService:Create(Blur, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = 15}):Play()
 TweenService:Create(Frame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 450, 0, 200),
+    Size = UDim2.new(0, 450, 0, 240),
     BackgroundTransparency = 0,
     BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 }):Play()
@@ -486,9 +811,23 @@ TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Expone
 }):Play()
 TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 
+TweenService:Create(HumanizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+    TextTransparency = 0,
+    BackgroundTransparency = 0
+}):Play()
+TweenService:Create(HumanizedStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+
+task.wait(0.1)
+TweenService:Create(InfoLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+
 TweenStealButton.MouseButton1Click:Connect(function()
     DebugInfo("print", "TweenSteal button clicked", "")
     TweenSteal(StatusLabel)
+end)
+
+HumanizedButton.MouseButton1Click:Connect(function()
+    DebugInfo("print", "Humanized button clicked", "")
+    HumanizedSteal(StatusLabel)
 end)
 
 -- Mejorar botón de minimizar
@@ -510,7 +849,7 @@ MinimizeButton.MouseLeave:Connect(function()
 end)
 
 local isMinimized = false
-local originalSize = UDim2.new(0, 450, 0, 200)
+local originalSize = UDim2.new(0, 450, 0, 240)
 local minimizedSize = UDim2.new(0, 250, 0, 45)
 
 -- Variables para drag personalizado en modo minimizado
@@ -588,6 +927,19 @@ MinimizeButton.MouseButton1Click:Connect(function()
         Transparency = contentTransparency
     }):Play()
     
+    TweenService:Create(HumanizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+        TextTransparency = contentTransparency,
+        BackgroundTransparency = contentTransparency
+    }):Play()
+    
+    TweenService:Create(HumanizedStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+        Transparency = contentTransparency
+    }):Play()
+    
+    TweenService:Create(InfoLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+        TextTransparency = contentTransparency
+    }):Play()
+    
     TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
         TextTransparency = contentTransparency
     }):Play()
@@ -635,6 +987,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
                     BackgroundTransparency = 0
                 }):Play()
                 TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+                TweenService:Create(HumanizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+                    TextTransparency = 0,
+                    BackgroundTransparency = 0
+                }):Play()
+                TweenService:Create(HumanizedStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+                TweenService:Create(InfoLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
                 TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
             end
             DebugInfo("print", "ArbixTPGui shown", "")
