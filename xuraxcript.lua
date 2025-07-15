@@ -6,7 +6,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local key = "arbix hub"
+local key = "moon"
 local discordLink = "https://discord.gg/EXK4dQxJBv"
 local scriptToLoad = [[
 local Players = game:GetService("Players")
@@ -26,11 +26,11 @@ local teleporting
 local function DebugInfo(mode, content, value)
     if not DEBUG then return end
     if mode == "warn" then
-        warn("[ArbixTP DEBUG]:", content, value or "")
+        warn("[MoonTP DEBUG]:", content, value or "")
     elseif mode == "print" then
-        print("[ArbixTP DEBUG]:", content, value or "")
+        print("[MoonTP DEBUG]:", content, value or "")
     else
-        warn("[ArbixTP DEBUG]: Invalid debug type.")
+        warn("[MoonTP DEBUG]: Invalid debug type.")
     end
 end
 
@@ -335,18 +335,18 @@ local function TweenSteal(statusLabel)
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArbixTPGui"
+ScreenGui.Name = "MoonTPGui"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-DebugInfo("print", "ArbixTPGui created", ScreenGui.Name)
+DebugInfo("print", "MoonTPGui created", ScreenGui.Name)
 
 local Blur = Instance.new("BlurEffect")
-Blur.Name = "ArbixTPBlur"
+Blur.Name = "MoonTPBlur"
 Blur.Size = 0
 Blur.Parent = workspace
-DebugInfo("print", "ArbixTPBlur created", Blur.Name)
+DebugInfo("print", "MoonTPBlur created", Blur.Name)
 
 local Frame = Instance.new("Frame")
 Frame.Parent = ScreenGui
@@ -411,7 +411,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, -80, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "ARBIX TP"
+TitleLabel.Text = "MOON TP"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 20
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -725,7 +725,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
                 TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
                 TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
             end
-            DebugInfo("print", "ArbixTPGui shown", "")
+            DebugInfo("print", "MoonTPGui shown", "")
         else
             TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
                 Size = UDim2.new(0, 0, 0, 0),
@@ -733,7 +733,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
             }):Play()
             TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
             TweenService:Create(DropShadow, TweenInfo.new(0.4), {ImageTransparency = 1}):Play()
-            DebugInfo("print", "ArbixTPGui hidden", "")
+            DebugInfo("print", "MoonTPGui hidden", "")
         end
     end
 end)
@@ -773,18 +773,18 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-DebugInfo("print", "ArbixTPGui initialization completed", "")
+DebugInfo("print", "MoonTPGui initialization completed", "")
 ]]
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArbixHub"
+ScreenGui.Name = "MoonScripts"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 local Blur = Instance.new("BlurEffect")
-Blur.Name = "ArbixBlur"
+Blur.Name = "MoonBlur"
 Blur.Size = 0
 Blur.Parent = Lighting
 
@@ -851,7 +851,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, -80, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "ARBIX HUB"
+TitleLabel.Text = "MOON SCRIPTS"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 20
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1184,7 +1184,7 @@ SubmitButton.MouseButton1Click:Connect(function()
         task.wait(0.4)
         ScreenGui:Destroy()
         Blur:Destroy()
-        print("[ArbixHub]: ArbixBlur destroyed")
+        print("[MoonScripts]: MoonBlur destroyed")
         local success, errorMsg = pcall(function()
             local func = loadstring(scriptToLoad)
             if not func then
@@ -1193,9 +1193,9 @@ SubmitButton.MouseButton1Click:Connect(function()
             func()
         end)
         if not success then
-            warn("[ArbixHub ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
+            warn("[MoonScripts ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
         else
-            print("[ArbixHub]: Successfully executed scriptToLoad")
+            print("[MoonScripts]: Successfully executed scriptToLoad")
         end
     else
         NotificationFrame.Visible = true
