@@ -6,7 +6,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local key = "MoonChk"
+local key = "moonchk"
 local discordLink = "https://discord.gg/EXK4dQxJBv"
 local scriptToLoad = [[
 local Players = game:GetService("Players")
@@ -777,7 +777,7 @@ DebugInfo("print", "ArbixTPGui initialization completed", "")
 ]]
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArbixHub"
+ScreenGui.Name = "MoonChk"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
@@ -851,7 +851,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, -80, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "ARBIX HUB"
+TitleLabel.Text = "MoonChk"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 20
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1158,7 +1158,7 @@ end)
 SubmitButton.MouseButton1Click:Connect(function()
     local userInput = string.lower(InputBox.Text or "")
     
-    if userInput == key then
+    if userInput == string.lower(key) then
         SubmitButton.Visible = false
         GetCodeButton.Visible = false
         LoadingCircle.Visible = true
@@ -1184,7 +1184,7 @@ SubmitButton.MouseButton1Click:Connect(function()
         task.wait(0.4)
         ScreenGui:Destroy()
         Blur:Destroy()
-        print("[ArbixHub]: ArbixBlur destroyed")
+        print("[MoonChk]: ArbixBlur destroyed")
         local success, errorMsg = pcall(function()
             local func = loadstring(scriptToLoad)
             if not func then
@@ -1193,9 +1193,9 @@ SubmitButton.MouseButton1Click:Connect(function()
             func()
         end)
         if not success then
-            warn("[ArbixHub ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
+            warn("[MoonChk ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
         else
-            print("[ArbixHub]: Successfully executed scriptToLoad")
+            print("[MoonChk]: Successfully executed scriptToLoad")
         end
     else
         NotificationFrame.Visible = true
