@@ -69,9 +69,13 @@ task.spawn(function()
 end)
 
 local function TweenSteal(statusLabel)
-    statusLabel.Text = "Iniciando TweenSteal directo..."
+    statusLabel.Text = "Iniciando TweenSteal seguro..."
     statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+
+    local function isCharacterValid()
+        return char and char.Parent and hrp and hrp.Parent and humanoid and humanoid.Parent
+    end
 
     local function findDeliveryHitbox()
         for _, v in ipairs(workspace.Plots:GetDescendants()) do
@@ -84,43 +88,94 @@ local function TweenSteal(statusLabel)
         return nil
     end
 
-    local function teleportDirect(targetCFrame)
-        if not hrp or not targetCFrame then return false end
+    local function safeTeleport(targetCFrame)
+        if not isCharacterValid() or not targetCFrame then return false end
         
-        local iterations = math.clamp(tpAmt or 70, 50, 120)
+        local iterations = math.clamp(tpAmt or 60, 40, 100)
+        local safeVoid = CFrame.new(0, -1000, 0) -- Void más seguro
         
-        -- Phase 1: Rapid teleports to target
+        -- Verificar posición inicial
+        local startPos = hrp.Position
+        
+        -- Fase 1: Teleportes directos al objetivo
         for i = 1, iterations do
+            if not isCharacterValid() then 
+                DebugInfo("warn", "Character lost during teleport phase 1", nil)
+                return false 
+            end
+            
             hrp.CFrame = targetCFrame * CFrame.new(
-                random:NextNumber(-0.001, 0.001),
-                random:NextNumber(-0.001, 0.001),
-                random:NextNumber(-0.001, 0.001)
+                random:NextNumber(-0.0001, 0.0001),
+                random:NextNumber(-0.0001, 0.0001),
+                random:NextNumber(-0.0001, 0.0001)
             )
             RunService.Heartbeat:Wait()
         end
         
-        -- Phase 2: Void sequence
-        for i = 1, 3 do
-            hrp.CFrame = CFrame.new(0, -3.4028234663852886e+38, 0)
-            task.wait(0.05)
+        -- Verificar que seguimos en una posición válida
+        if not isCharacterValid() then
+            DebugInfo("warn", "Character lost after phase 1", nil)
+            return false
+        end
+        
+        -- Fase 2: Secuencia void controlada
+        for i = 1, 2 do
+            if not isCharacterValid() then break end
+            
+            -- Void seguro
+            hrp.CFrame = safeVoid
+            task.wait(0.03)
+            
+            -- Verificar antes de regresar
+            if not isCharacterValid() then 
+                DebugInfo("warn", "Character lost in void", nil)
+                -- Intentar recuperar
+                task.wait(0.1)
+                if char and char.Parent then
+                    hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.CFrame = targetCFrame
+                    end
+                end
+                break
+            end
+            
             hrp.CFrame = targetCFrame
-            task.wait(0.05)
+            task.wait(0.03)
         end
         
-        -- Phase 3: Final positioning precision
-        for i = 1, math.floor(iterations / 8) do
+        -- Verificación final
+        if not isCharacterValid() then
+            DebugInfo("warn", "Character lost during void sequence", nil)
+            return false
+        end
+        
+        -- Fase 3: Posicionamiento final suave
+        for i = 1, 10 do
+            if not isCharacterValid() then break end
+            
             hrp.CFrame = targetCFrame * CFrame.new(
-                random:NextNumber(-0.1, 0.1),
+                random:NextNumber(-0.05, 0.05),
                 0,
-                random:NextNumber(-0.1, 0.1)
+                random:NextNumber(-0.05, 0.05)
             )
             RunService.Heartbeat:Wait()
         end
         
-        return true
+        return isCharacterValid()
     end
 
-    -- Find delivery spot
+    -- Verificar estado inicial
+    if not isCharacterValid() then
+        statusLabel.Text = "Error: Personaje no válido"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        task.wait(2)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        return
+    end
+
+    -- Buscar delivery hitbox
     local delivery = findDeliveryHitbox()
     if not delivery then
         statusLabel.Text = "Error: No se encontró DeliveryHitbox"
@@ -131,79 +186,90 @@ local function TweenSteal(statusLabel)
         return
     end
 
-    DebugInfo("print", "DeliveryHitbox found for direct TweenSteal", delivery)
+    DebugInfo("print", "DeliveryHitbox found for safe TweenSteal", delivery)
     
-    statusLabel.Text = "Ejecutando teleporte directo..."
+    statusLabel.Text = "Ejecutando teleporte seguro..."
     TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
 
-    -- Calculate optimal target position
+    -- Guardar posición inicial por seguridad
+    local originalPosition = hrp.CFrame
+    
+    -- Calcular posición objetivo
     local targetPosition = delivery.CFrame * CFrame.new(0, -2, 0)
     
-    -- Execute direct teleport
-    local success = teleportDirect(targetPosition)
+    -- Ejecutar teleporte seguro
+    local success = safeTeleport(targetPosition)
     
-    -- Verify success
-    task.wait(0.3)
-    local finalDistance = (hrp.Position - delivery.Position).Magnitude
+    -- Verificar resultado
+    task.wait(0.2)
     
-    -- Additional precision attempts if needed
-    if finalDistance > 15 then
-        statusLabel.Text = "Ajustando posición..."
+    if not isCharacterValid() then
+        statusLabel.Text = "Error: Personaje perdido, restaurando..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
         TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
         
-        -- Precision adjustment
-        for attempt = 1, 5 do
+        -- Intentar restaurar personaje
+        task.wait(0.5)
+        if char and char.Parent then
+            hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = originalPosition
+                statusLabel.Text = "Personaje restaurado, reintenta"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+            else
+                statusLabel.Text = "Error: No se pudo restaurar"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+            end
+        end
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        task.wait(2)
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        return
+    end
+    
+    local finalDistance = (hrp.Position - delivery.Position).Magnitude
+    
+    -- Ajuste de precisión si es necesario (sin void)
+    if finalDistance > 15 and isCharacterValid() then
+        statusLabel.Text = "Ajuste de precisión..."
+        TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+        
+        for attempt = 1, 3 do
+            if not isCharacterValid() then break end
+            
             local preciseTarget = delivery.CFrame * CFrame.new(
                 random:NextNumber(-1, 1),
-                random:NextNumber(-3, -1),
+                random:NextNumber(-2.5, -1.5),
                 random:NextNumber(-1, 1)
             )
             
-            for i = 1, 30 do
+            -- Teleporte directo sin void
+            for i = 1, 20 do
+                if not isCharacterValid() then break end
                 hrp.CFrame = preciseTarget
                 RunService.Heartbeat:Wait()
             end
             
-            -- Void and return
-            hrp.CFrame = CFrame.new(0, -3.4028234663852886e+38, 0)
-            task.wait(0.03)
-            hrp.CFrame = preciseTarget
-            task.wait(0.03)
-            
             finalDistance = (hrp.Position - delivery.Position).Magnitude
-            if finalDistance <= 15 then
-                break
-            end
+            if finalDistance <= 15 then break end
         end
     end
 
-    -- Final verification and result
-    finalDistance = (hrp.Position - delivery.Position).Magnitude
-    
-    if finalDistance <= 20 then
-        DebugInfo("print", "Direct TweenSteal succeeded", finalDistance)
-        statusLabel.Text = "¡TweenSteal Exitoso! ✓"
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-    else
-        DebugInfo("warn", "Direct TweenSteal needs retry", finalDistance)
-        statusLabel.Text = "Reintentando..."
-        statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
-        
-        -- Emergency retry with forced positioning
-        local emergencyTarget = delivery.CFrame * CFrame.new(0, -1.5, 0)
-        for i = 1, 100 do
-            hrp.CFrame = emergencyTarget
-            RunService.Heartbeat:Wait()
-        end
-        
+    -- Resultado final
+    if isCharacterValid() then
         finalDistance = (hrp.Position - delivery.Position).Magnitude
+        
         if finalDistance <= 20 then
+            DebugInfo("print", "Safe TweenSteal succeeded", finalDistance)
             statusLabel.Text = "¡TweenSteal Exitoso! ✓"
             statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
         else
-            statusLabel.Text = "Error: Reintenta en unos segundos"
-            statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLabel.Text = "Parcialmente exitoso (dist: " .. math.floor(finalDistance) .. "m)"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
         end
+    else
+        statusLabel.Text = "Error: Personaje inestable"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
     
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
