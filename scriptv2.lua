@@ -368,7 +368,6 @@ local function CreateToggle(name, position, callback)
     toggleFrame.BorderSizePixel = 0
     toggleFrame.Position = position
     toggleFrame.Size = UDim2.new(0.9, 0, 0, 35)
-    toggleFrame.TextTransparency = 1
 
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(0, 8)
@@ -544,8 +543,14 @@ for i, toggle in pairs(toggles) do
     TweenService:Create(toggle, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
         BackgroundTransparency = 0
     }):Play()
-    TweenService:Create(toggle:FindFirstChild("Label"), TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-    TweenService:Create(toggle:FindFirstChild("Toggle"), TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
+    local label = toggle:FindFirstChild("Label")
+    local toggleButton = toggle:FindFirstChild("Toggle")
+    if label then
+        TweenService:Create(label, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    end
+    if toggleButton then
+        TweenService:Create(toggleButton, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
+    end
 end
 
 task.wait(0.2)
