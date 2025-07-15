@@ -509,111 +509,246 @@ MinimizeButton.MouseLeave:Connect(function()
     }):Play()
 end)
 
+-- Crear Luna Minimizada
+local MoonFrame = Instance.new("Frame")
+MoonFrame.Name = "MoonFrame"
+MoonFrame.Parent = ScreenGui
+MoonFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+MoonFrame.BorderSizePixel = 0
+MoonFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MoonFrame.Position = UDim2.new(1, -60, 0, 60) -- Esquina superior derecha
+MoonFrame.Size = UDim2.new(0, 80, 0, 80)
+MoonFrame.Visible = false
+MoonFrame.ZIndex = 1000
+
+local MoonCorner = Instance.new("UICorner")
+MoonCorner.CornerRadius = UDim.new(1, 0) -- Circular completo
+MoonCorner.Parent = MoonFrame
+
+local MoonGradient = Instance.new("UIGradient")
+MoonGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 45, 65)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 45))
+})
+MoonGradient.Rotation = 45
+MoonGradient.Parent = MoonFrame
+
+local MoonStroke = Instance.new("UIStroke")
+MoonStroke.Parent = MoonFrame
+MoonStroke.Color = Color3.fromRGB(100, 120, 200)
+MoonStroke.Thickness = 3
+MoonStroke.Transparency = 0.3
+
+local MoonLabel = Instance.new("TextLabel")
+MoonLabel.Name = "MoonLabel"
+MoonLabel.Parent = MoonFrame
+MoonLabel.BackgroundTransparency = 1
+MoonLabel.Size = UDim2.new(1, 0, 1, 0)
+MoonLabel.Font = Enum.Font.SourceSansBold
+MoonLabel.Text = "🌙"
+MoonLabel.TextColor3 = Color3.fromRGB(220, 230, 255)
+MoonLabel.TextSize = 48
+MoonLabel.TextXAlignment = Enum.TextXAlignment.Center
+MoonLabel.TextYAlignment = Enum.TextYAlignment.Center
+
+-- Variables para la luna
 local isMinimized = false
 local originalSize = UDim2.new(0, 450, 0, 200)
-local minimizedSize = UDim2.new(0, 120, 0, 40)
-
--- Variables para drag personalizado en modo minimizado
-local isDraggingMinimized = false
 local lastMinimizedPosition = UDim2.new(0.5, 0, 0.5, 0)
 
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    local targetSize = isMinimized and minimizedSize or originalSize
-    local contentTransparency = isMinimized and 1 or 0
-    
-    -- Guardar posición actual si se está minimizando
-    if isMinimized then
-        lastMinimizedPosition = Frame.Position
+-- Sistema de arrastre para la luna
+local moonDragging = false
+local moonDragInput, moonDragStart, moonStartPos
+
+-- Efectos hover para la luna
+MoonFrame.MouseEnter:Connect(function()
+    TweenService:Create(MoonFrame, TweenInfo.new(0.2), {
+        Size = UDim2.new(0, 90, 0, 90),
+        BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    }):Play()
+    TweenService:Create(MoonStroke, TweenInfo.new(0.2), {
+        Color = Color3.fromRGB(120, 140, 220),
+        Thickness = 4,
+        Transparency = 0.1
+    }):Play()
+    TweenService:Create(MoonLabel, TweenInfo.new(0.2), {
+        TextSize = 52,
+        TextColor3 = Color3.fromRGB(240, 250, 255)
+    }):Play()
+end)
+
+MoonFrame.MouseLeave:Connect(function()
+    if not moonDragging then
+        TweenService:Create(MoonFrame, TweenInfo.new(0.2), {
+            Size = UDim2.new(0, 80, 0, 80),
+            BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+        }):Play()
+        TweenService:Create(MoonStroke, TweenInfo.new(0.2), {
+            Color = Color3.fromRGB(100, 120, 200),
+            Thickness = 3,
+            Transparency = 0.3
+        }):Play()
+        TweenService:Create(MoonLabel, TweenInfo.new(0.2), {
+            TextSize = 48,
+            TextColor3 = Color3.fromRGB(220, 230, 255)
+        }):Play()
     end
-    
-    -- Hacer la ventana minimizada más visible y estilizada
-    if isMinimized then
-        -- Posición en esquina superior derecha cuando se minimiza
+end)
+
+-- Funcionalidad de arrastre para la luna
+MoonFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        moonDragging = true
+        moonDragStart = input.Position
+        moonStartPos = MoonFrame.Position
+        
+        -- Efecto visual al comenzar a arrastrar
+        TweenService:Create(MoonFrame, TweenInfo.new(0.1), {
+            Size = UDim2.new(0, 85, 0, 85)
+        }):Play()
+        TweenService:Create(MoonStroke, TweenInfo.new(0.1), {
+            Thickness = 5,
+            Transparency = 0
+        }):Play()
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                moonDragging = false
+                -- Restaurar tamaño al soltar
+                TweenService:Create(MoonFrame, TweenInfo.new(0.2), {
+                    Size = UDim2.new(0, 80, 0, 80)
+                }):Play()
+                TweenService:Create(MoonStroke, TweenInfo.new(0.2), {
+                    Thickness = 3,
+                    Transparency = 0.3
+                }):Play()
+            end
+        end)
+    end
+end)
+
+MoonFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        moonDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == moonDragInput and moonDragging then
+        local delta = input.Position - moonDragStart
+        local goal = UDim2.new(
+            moonStartPos.X.Scale,
+            moonStartPos.X.Offset + delta.X,
+            moonStartPos.Y.Scale,
+            moonStartPos.Y.Offset + delta.Y
+        )
+        
+        -- Aplicar límites de pantalla para la luna
         local screenSize = workspace.CurrentCamera.ViewportSize
-        local rightPosition = screenSize.X - minimizedSize.X.Offset - 20
-        Frame.Position = UDim2.new(0, rightPosition, 0, 20)
+        local moonSize = 80
         
-        -- Estilo especial para ventana minimizada tipo botón
-        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-            Size = targetSize,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 40),
-            Position = UDim2.new(0, rightPosition, 0, 20)
+        local minX = moonSize/2
+        local maxX = screenSize.X - moonSize/2
+        local minY = moonSize/2
+        local maxY = screenSize.Y - moonSize/2
+        
+        -- Aplicar límites
+        local clampedX = math.clamp(goal.X.Offset, minX, maxX)
+        local clampedY = math.clamp(goal.Y.Offset, minY, maxY)
+        
+        local finalGoal = UDim2.new(0, clampedX, 0, clampedY)
+        MoonFrame.Position = finalGoal
+    end
+end)
+
+-- Click en la luna para abrir el menú
+MoonFrame.MouseButton1Click:Connect(function()
+    if not moonDragging then -- Solo abrir si no estamos arrastrando
+        isMinimized = false
+        
+        -- Ocultar luna con animación
+        TweenService:Create(MoonFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        }):Play()
+        TweenService:Create(MoonLabel, TweenInfo.new(0.3), {
+            TextTransparency = 1
+        }):Play()
+        TweenService:Create(MoonStroke, TweenInfo.new(0.3), {
+            Transparency = 1
         }):Play()
         
-        -- Hacer la barra de título igual al fondo para que parezca un botón
-        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
-            BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        }):Play()
+        task.wait(0.1)
+        MoonFrame.Visible = false
         
-        -- Hacer que el UICorner sea más redondeado para look de botón
-        TweenService:Create(UICorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 20)
-        }):Play()
-        TweenService:Create(TitleBarCorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 20)
-        }):Play()
-        
-        -- Hacer el título más prominente en modo minimizado
-        TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
-            TextSize = 14,
-            TextColor3 = Color3.fromRGB(180, 200, 255),
-            Text = "🌙 MOON"
-        }):Play()
-    else
-        -- Restaurar posición y estilo original
-        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-            Size = targetSize,
-            BackgroundColor3 = Color3.fromRGB(10, 10, 15),
+        -- Mostrar ventana principal
+        Frame.Visible = true
+        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = originalSize,
+            BackgroundTransparency = 0,
             Position = lastMinimizedPosition
         }):Play()
         
-        -- Restaurar barra de título original
-        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
-            BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-        }):Play()
+        TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 15}):Play()
         
-        -- Restaurar esquinas originales
-        TweenService:Create(UICorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 16)
+        -- Restaurar contenido
+        Content.Visible = true
+        TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+            TextTransparency = 0,
+            BackgroundTransparency = 0
         }):Play()
-        TweenService:Create(TitleBarCorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 16)
-        }):Play()
+        TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+        TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
         
+        -- Restaurar título
         TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
             TextSize = 18,
             TextColor3 = Color3.fromRGB(200, 220, 255),
             Text = "🌙 MOON SCRIPTS"
         }):Play()
+        
+        MinimizeButton.Text = "—"
+        MinimizeButton.TextSize = 22
+        
+        DebugInfo("print", "Opened from moon", "")
     end
-    
-    TweenService:Create(Content, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Visible = not isMinimized
-    }):Play()
-    
-    TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-        ImageTransparency = 0.6,
-        Visible = true
-    }):Play()
-    
-    TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency,
-        BackgroundTransparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Transparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency
-    }):Play()
-    
-    MinimizeButton.Text = isMinimized and "□" or "—"
-    MinimizeButton.TextSize = isMinimized and 16 or 22
-    
-    DebugInfo("print", "Minimize toggled", isMinimized and "Minimized" or "Restored")
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    if not isMinimized then
+        isMinimized = true
+        lastMinimizedPosition = Frame.Position
+        
+        -- Ocultar ventana principal
+        TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        }):Play()
+        TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
+        
+        task.wait(0.1)
+        Frame.Visible = false
+        
+        -- Mostrar luna
+        MoonFrame.Visible = true
+        MoonFrame.Size = UDim2.new(0, 0, 0, 0)
+        MoonFrame.BackgroundTransparency = 1
+        MoonLabel.TextTransparency = 1
+        MoonStroke.Transparency = 1
+        
+        TweenService:Create(MoonFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 80, 0, 80),
+            BackgroundTransparency = 0
+        }):Play()
+        TweenService:Create(MoonLabel, TweenInfo.new(0.4), {
+            TextTransparency = 0
+        }):Play()
+        TweenService:Create(MoonStroke, TweenInfo.new(0.4), {
+            Transparency = 0.3
+        }):Play()
+        
+        DebugInfo("print", "Minimized to moon", "")
+    end
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
@@ -634,20 +769,33 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if input.KeyCode == Enum.KeyCode.RightShift then
         isGuiVisible = not isGuiVisible
         if isGuiVisible then
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = isMinimized and minimizedSize or originalSize,
-                BackgroundColor3 = Color3.fromRGB(10, 10, 15),
-                BackgroundTransparency = 0
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 15}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-                ImageTransparency = 0.6,
-                Visible = true
-            }):Play()
-            TweenService:Create(Content, TweenInfo.new(0.4), {
-                Visible = not isMinimized
-            }):Play()
-            if not isMinimized then
+            if isMinimized then
+                -- Mostrar luna si está minimizada
+                MoonFrame.Visible = true
+                TweenService:Create(MoonFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0, 80, 0, 80),
+                    BackgroundTransparency = 0
+                }):Play()
+                TweenService:Create(MoonLabel, TweenInfo.new(0.4), {
+                    TextTransparency = 0
+                }):Play()
+                TweenService:Create(MoonStroke, TweenInfo.new(0.4), {
+                    Transparency = 0.3
+                }):Play()
+            else
+                -- Mostrar ventana normal
+                Frame.Visible = true
+                TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = originalSize,
+                    BackgroundColor3 = Color3.fromRGB(10, 10, 15),
+                    BackgroundTransparency = 0
+                }):Play()
+                TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 15}):Play()
+                TweenService:Create(DropShadow, TweenInfo.new(0.4), {
+                    ImageTransparency = 0.6,
+                    Visible = true
+                }):Play()
+                Content.Visible = true
                 TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
                     TextTransparency = 0,
                     BackgroundTransparency = 0
@@ -657,12 +805,30 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
             end
             DebugInfo("print", "MoonTPGui shown", "")
         else
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                Size = UDim2.new(0, 0, 0, 0),
-                BackgroundTransparency = 1
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {ImageTransparency = 1}):Play()
+            -- Ocultar todo
+            if isMinimized then
+                TweenService:Create(MoonFrame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    BackgroundTransparency = 1
+                }):Play()
+                TweenService:Create(MoonLabel, TweenInfo.new(0.4), {
+                    TextTransparency = 1
+                }):Play()
+                TweenService:Create(MoonStroke, TweenInfo.new(0.4), {
+                    Transparency = 1
+                }):Play()
+                task.wait(0.4)
+                MoonFrame.Visible = false
+            else
+                TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    BackgroundTransparency = 1
+                }):Play()
+                TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
+                TweenService:Create(DropShadow, TweenInfo.new(0.4), {ImageTransparency = 1}):Play()
+                task.wait(0.4)
+                Frame.Visible = false
+            end
             DebugInfo("print", "MoonTPGui hidden", "")
         end
     end
@@ -672,7 +838,7 @@ local dragging = false
 local dragInput, dragStart, startPos
 
 TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not isMinimized then
         dragging = true
         dragStart = input.Position
         startPos = Frame.Position
@@ -685,13 +851,13 @@ TitleBar.InputBegan:Connect(function(input)
 end)
 
 TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
+    if input.UserInputType == Enum.UserInputType.MouseMovement and not isMinimized then
         dragInput = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if input == dragInput and dragging and not isMinimized then
         local delta = input.Position - dragStart
         local goal = UDim2.new(
             startPos.X.Scale,
@@ -702,7 +868,7 @@ UserInputService.InputChanged:Connect(function(input)
         
         -- Aplicar límites de pantalla para evitar que la ventana se pierda
         local screenSize = workspace.CurrentCamera.ViewportSize
-        local frameSize = isMinimized and minimizedSize or originalSize
+        local frameSize = originalSize
         
         -- Límites ajustados
         local minX = -frameSize.X.Offset + 50  -- Permitir que se oculte parcialmente
@@ -716,25 +882,17 @@ UserInputService.InputChanged:Connect(function(input)
         
         local finalGoal = UDim2.new(goal.X.Scale, clampedX, goal.Y.Scale, clampedY)
         
-        -- Guardar la posición si está minimizada para recordarla
-        if isMinimized then
-            lastMinimizedPosition = finalGoal
-        end
+        -- Guardar la posición para cuando se restaure
+        lastMinimizedPosition = finalGoal
         
-        -- Movimiento más suave para ventana minimizada
-        local tweenTime = isMinimized and 0.02 or 0.05
-        Frame:TweenPosition(finalGoal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, tweenTime, true)
+        -- Movimiento suave para la ventana principal
+        Frame:TweenPosition(finalGoal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.05, true)
     end
 end)
 
--- Hacer que la ventana minimizada se pueda expandir haciendo click en el texto
-TitleLabel.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and isMinimized then
-        MinimizeButton.MouseButton1Click:Fire()
-    end
-end)
+-- La funcionalidad de expandir ahora está en la luna, no en el título
 
-DebugInfo("print", "MoonTPGui initialization completed", "")
+DebugInfo("print", "Moon Scripts GUI initialization completed", "")
 ]]
 
 local ScreenGui = Instance.new("ScreenGui")
