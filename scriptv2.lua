@@ -491,19 +491,84 @@ TweenStealButton.MouseButton1Click:Connect(function()
     TweenSteal(StatusLabel)
 end)
 
+-- Mejorar botón de minimizar
+MinimizeButton.Size = UDim2.new(0, 36, 0, 36)
+MinimizeButton.TextSize = 22
+
+-- Efecto hover para el botón minimizar
+MinimizeButton.MouseEnter:Connect(function()
+    TweenService:Create(MinimizeButton, TweenInfo.new(0.2), {
+        TextColor3 = Color3.fromRGB(255, 255, 100),
+        TextSize = 26
+    }):Play()
+end)
+MinimizeButton.MouseLeave:Connect(function()
+    TweenService:Create(MinimizeButton, TweenInfo.new(0.2), {
+        TextColor3 = Color3.fromRGB(255, 204, 0),
+        TextSize = 22
+    }):Play()
+end)
+
 local isMinimized = false
 local originalSize = UDim2.new(0, 450, 0, 200)
-local minimizedSize = UDim2.new(0, 200, 0, 40)
+local minimizedSize = UDim2.new(0, 250, 0, 45)
+
+-- Variables para drag personalizado en modo minimizado
+local isDraggingMinimized = false
+local lastMinimizedPosition = UDim2.new(0.5, 0, 0.5, 0)
 
 MinimizeButton.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     local targetSize = isMinimized and minimizedSize or originalSize
     local contentTransparency = isMinimized and 1 or 0
     
-    TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Size = targetSize,
-        BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-    }):Play()
+    -- Guardar posición actual si se está minimizando
+    if isMinimized then
+        lastMinimizedPosition = Frame.Position
+    end
+    
+    -- Hacer la ventana minimizada más visible y estilizada
+    if isMinimized then
+        -- Posición más accesible cuando se minimiza
+        Frame.Position = UDim2.new(0, 20, 0, 100)
+        
+        -- Estilo especial para ventana minimizada
+        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+            Size = targetSize,
+            BackgroundColor3 = Color3.fromRGB(15, 25, 35),
+            Position = UDim2.new(0, 20, 0, 100)
+        }):Play()
+        
+        -- Añadir borde brillante para indicar que es arrastrable
+        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
+            BackgroundColor3 = Color3.fromRGB(25, 35, 45)
+        }):Play()
+        
+        -- Hacer el título más prominente en modo minimizado
+        TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
+            TextSize = 16,
+            TextColor3 = Color3.fromRGB(100, 255, 150),
+            Text = "ARBIX TP [MINIMIZADO]"
+        }):Play()
+    else
+        -- Restaurar posición y estilo original
+        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+            Size = targetSize,
+            BackgroundColor3 = Color3.fromRGB(10, 10, 15),
+            Position = lastMinimizedPosition
+        }):Play()
+        
+        -- Restaurar barra de título original
+        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
+            BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+        }):Play()
+        
+        TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
+            TextSize = 20,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Text = "ARBIX TP"
+        }):Play()
+    end
     
     TweenService:Create(Content, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
         Visible = not isMinimized
@@ -528,6 +593,8 @@ MinimizeButton.MouseButton1Click:Connect(function()
     }):Play()
     
     MinimizeButton.Text = isMinimized and "□" or "—"
+    MinimizeButton.TextSize = isMinimized and 18 or 22
+    
     DebugInfo("print", "Minimize toggled", isMinimized and "Minimized" or "Restored")
 end)
 
@@ -614,7 +681,31 @@ UserInputService.InputChanged:Connect(function(input)
             startPos.Y.Scale,
             startPos.Y.Offset + delta.Y
         )
-        Frame:TweenPosition(goal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.05, true)
+        
+        -- Aplicar límites de pantalla para evitar que la ventana se pierda
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        local frameSize = isMinimized and minimizedSize or originalSize
+        
+        -- Límites ajustados
+        local minX = -frameSize.X.Offset + 50  -- Permitir que se oculte parcialmente
+        local maxX = screenSize.X - 50         -- Mantener al menos 50px visibles
+        local minY = 0                         -- No permitir ir arriba de la pantalla
+        local maxY = screenSize.Y - frameSize.Y.Offset -- No ir abajo de la pantalla
+        
+        -- Aplicar límites
+        local clampedX = math.clamp(goal.X.Offset, minX, maxX)
+        local clampedY = math.clamp(goal.Y.Offset, minY, maxY)
+        
+        local finalGoal = UDim2.new(goal.X.Scale, clampedX, goal.Y.Scale, clampedY)
+        
+        -- Guardar la posición si está minimizada para recordarla
+        if isMinimized then
+            lastMinimizedPosition = finalGoal
+        end
+        
+        -- Movimiento más suave para ventana minimizada
+        local tweenTime = isMinimized and 0.02 or 0.05
+        Frame:TweenPosition(finalGoal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, tweenTime, true)
     end
 end)
 
