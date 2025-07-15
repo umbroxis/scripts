@@ -6,7 +6,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local key = "moonchk"
+local key = "moon"
 local discordLink = "https://discord.gg/EXK4dQxJBv"
 local scriptToLoad = [[
 local Players = game:GetService("Players")
@@ -777,14 +777,14 @@ DebugInfo("print", "ArbixTPGui initialization completed", "")
 ]]
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MoonChk"
+ScreenGui.Name = "MoonScripts"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 local Blur = Instance.new("BlurEffect")
-Blur.Name = "ArbixBlur"
+Blur.Name = "MoonBlur"
 Blur.Size = 0
 Blur.Parent = Lighting
 
@@ -851,7 +851,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, -80, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "MoonChk"
+TitleLabel.Text = "MoonScripts"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 20
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1158,7 +1158,7 @@ end)
 SubmitButton.MouseButton1Click:Connect(function()
     local userInput = string.lower(InputBox.Text or "")
     
-    if userInput == string.lower(key) then
+    if userInput == key then
         SubmitButton.Visible = false
         GetCodeButton.Visible = false
         LoadingCircle.Visible = true
@@ -1184,7 +1184,7 @@ SubmitButton.MouseButton1Click:Connect(function()
         task.wait(0.4)
         ScreenGui:Destroy()
         Blur:Destroy()
-        print("[MoonChk]: ArbixBlur destroyed")
+        print("[MoonScripts]: MoonBlur destroyed")
         local success, errorMsg = pcall(function()
             local func = loadstring(scriptToLoad)
             if not func then
@@ -1193,9 +1193,9 @@ SubmitButton.MouseButton1Click:Connect(function()
             func()
         end)
         if not success then
-            warn("[MoonChk ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
+            warn("[MoonScripts ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
         else
-            print("[MoonChk]: Successfully executed scriptToLoad")
+            print("[MoonScripts]: Successfully executed scriptToLoad")
         end
     else
         NotificationFrame.Visible = true
