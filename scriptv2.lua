@@ -529,14 +529,16 @@ MinimizeButton.MouseButton1Click:Connect(function()
     
     -- Hacer la ventana minimizada más visible y estilizada
     if isMinimized then
-        -- Posición más accesible cuando se minimiza
-        Frame.Position = UDim2.new(0, 20, 0, 100)
+        -- Posición en esquina superior derecha cuando se minimiza
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        local rightPosition = screenSize.X - minimizedSize.X.Offset - 20
+        Frame.Position = UDim2.new(0, rightPosition, 0, 20)
         
         -- Estilo especial para ventana minimizada tipo botón
         TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
             Size = targetSize,
             BackgroundColor3 = Color3.fromRGB(30, 30, 40),
-            Position = UDim2.new(0, 20, 0, 20)
+            Position = UDim2.new(0, rightPosition, 0, 20)
         }):Play()
         
         -- Hacer la barra de título igual al fondo para que parezca un botón
