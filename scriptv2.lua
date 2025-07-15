@@ -69,171 +69,59 @@ task.spawn(function()
 end)
 
 local function TweenSteal(statusLabel)
-    -- Enhanced configuration with dynamic values
-    local BASE_ITERATIONS = math.random(60, 120)
-    local VOID_POSITIONS = {
-        CFrame.new(0, -3e40, 0),
-        CFrame.new(1000000, -3e40, 1000000),
-        CFrame.new(-1000000, -3e40, -1000000)
-    }
-    local JITTER_RANGES = {
-        micro = {-0.0001, 0.0001},
-        small = {-0.0008, 0.0008},
-        medium = {-0.002, 0.002}
-    }
-    
-    statusLabel.Text = "Iniciando TweenSteal..."
+    statusLabel.Text = "Iniciando TweenSteal directo..."
     statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
 
-    local function isPositionSafe(position)
-        -- Check if position is valid and safe
-        if not position or typeof(position) ~= "Vector3" then return false end
-        if position.Y < -1000 then return false end
-        return true
-    end
-
-    local function getRandomJitter(intensity)
-        local range = JITTER_RANGES[intensity] or JITTER_RANGES.small
-        return Vector3.new(
-            random:NextNumber(range[1], range[2]),
-            random:NextNumber(range[1], range[2]),
-            random:NextNumber(range[1], range[2])
-        )
-    end
-
-    local function executeAdvancedMovement(targetCF, method)
-        if not hrp or typeof(targetCF) ~= "CFrame" then
-            DebugInfo("warn", "Invalid HRP or target CFrame", nil)
-            return false
-        end
-        
-        local startPos = hrp.Position
-        local targetPos = targetCF.Position
-        local distance = (targetPos - startPos).Magnitude
-        
-        if method == "curve" then
-            -- Curved path with variable speed
-            local steps = math.clamp(math.floor(distance / 5), 20, 100)
-            for i = 1, steps do
-                local progress = i / steps
-                local curvedProgress = math.sin(progress * math.pi * 0.5) -- Smooth sine curve
-                
-                local currentPos = startPos:Lerp(targetPos, curvedProgress)
-                currentPos = currentPos + getRandomJitter("micro")
-                
-                if isPositionSafe(currentPos) then
-                    hrp.CFrame = CFrame.new(currentPos) * (hrp.CFrame - hrp.Position)
-                end
-                
-                local waitTime = random:NextNumber(0.001, 0.008)
-                task.wait(waitTime)
-            end
-            
-        elseif method == "zigzag" then
-            -- Zigzag pattern to confuse detection
-            local steps = math.random(30, 80)
-            local sideOffset = random:NextNumber(2, 8)
-            
-            for i = 1, steps do
-                local progress = i / steps
-                local basePos = startPos:Lerp(targetPos, progress)
-                
-                local zigzagOffset = math.sin(progress * math.pi * random:NextNumber(3, 6)) * sideOffset
-                local rightVector = (targetPos - startPos):Cross(Vector3.new(0, 1, 0)).Unit
-                local currentPos = basePos + rightVector * zigzagOffset + getRandomJitter("small")
-                
-                if isPositionSafe(currentPos) then
-                    hrp.CFrame = CFrame.new(currentPos) * (hrp.CFrame - hrp.Position)
-                end
-                
-                task.wait(random:NextNumber(0.003, 0.012))
-            end
-            
-        elseif method == "spiral" then
-            -- Spiral approach for maximum stealth
-            local steps = math.random(40, 90)
-            local radius = math.min(distance * 0.3, 50)
-            
-            for i = 1, steps do
-                local progress = i / steps
-                local angle = progress * math.pi * random:NextNumber(2, 4)
-                local currentRadius = radius * (1 - progress)
-                
-                local basePos = startPos:Lerp(targetPos, progress)
-                local circleOffset = Vector3.new(
-                    math.cos(angle) * currentRadius,
-                    math.sin(angle * 0.5) * currentRadius * 0.3,
-                    math.sin(angle) * currentRadius
-                )
-                
-                local currentPos = basePos + circleOffset + getRandomJitter("medium")
-                
-                if isPositionSafe(currentPos) then
-                    hrp.CFrame = CFrame.new(currentPos) * (hrp.CFrame - hrp.Position)
-                end
-                
-                task.wait(random:NextNumber(0.005, 0.015))
-            end
-        end
-        
-        return true
-    end
-
-    local function findOptimalDeliverySpot()
-        local deliverySpots = {}
-        
+    local function findDeliveryHitbox()
         for _, v in ipairs(workspace.Plots:GetDescendants()) do
             if v.Name == "DeliveryHitbox" and v.Parent:FindFirstChild("PlotSign") then
                 if v.Parent.PlotSign:FindFirstChild("YourBase") and v.Parent.PlotSign.YourBase.Enabled then
-                    table.insert(deliverySpots, v)
+                    return v
                 end
             end
         end
-        
-        if #deliverySpots == 0 then
-            DebugInfo("warn", "No valid DeliveryHitbox found for TweenSteal", nil)
-            return nil
-        end
-        
-        -- Return closest delivery spot
-        local closestSpot = deliverySpots[1]
-        local shortestDistance = (closestSpot.Position - hrp.Position).Magnitude
-        
-        for _, spot in ipairs(deliverySpots) do
-            local distance = (spot.Position - hrp.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                closestSpot = spot
-            end
-        end
-        
-        return closestSpot
+        return nil
     end
 
-    local function performVoidSequence(targetCF, intensity)
-        local voidCount = math.random(2, 5)
-        local targetPos = targetCF.Position
+    local function teleportDirect(targetCFrame)
+        if not hrp or not targetCFrame then return false end
         
-        for i = 1, voidCount do
-            -- Random void position
-            local voidPos = VOID_POSITIONS[math.random(1, #VOID_POSITIONS)]
-            hrp.CFrame = voidPos
-            task.wait(random:NextNumber(0.03, 0.08))
-            
-            -- Return to target with slight offset
-            local returnPos = targetCF * CFrame.new(
-                random:NextNumber(-2, 2),
-                random:NextNumber(-1, 1),
-                random:NextNumber(-2, 2)
+        local iterations = math.clamp(tpAmt or 70, 50, 120)
+        
+        -- Phase 1: Rapid teleports to target
+        for i = 1, iterations do
+            hrp.CFrame = targetCFrame * CFrame.new(
+                random:NextNumber(-0.001, 0.001),
+                random:NextNumber(-0.001, 0.001),
+                random:NextNumber(-0.001, 0.001)
             )
-            hrp.CFrame = returnPos
-            task.wait(random:NextNumber(0.02, 0.06))
+            RunService.Heartbeat:Wait()
         end
+        
+        -- Phase 2: Void sequence
+        for i = 1, 3 do
+            hrp.CFrame = CFrame.new(0, -3.4028234663852886e+38, 0)
+            task.wait(0.05)
+            hrp.CFrame = targetCFrame
+            task.wait(0.05)
+        end
+        
+        -- Phase 3: Final positioning precision
+        for i = 1, math.floor(iterations / 8) do
+            hrp.CFrame = targetCFrame * CFrame.new(
+                random:NextNumber(-0.1, 0.1),
+                0,
+                random:NextNumber(-0.1, 0.1)
+            )
+            RunService.Heartbeat:Wait()
+        end
+        
+        return true
     end
 
-    -- Main execution
-    local delivery = findOptimalDeliverySpot()
+    -- Find delivery spot
+    local delivery = findDeliveryHitbox()
     if not delivery then
         statusLabel.Text = "Error: No se encontró DeliveryHitbox"
         statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
@@ -243,81 +131,83 @@ local function TweenSteal(statusLabel)
         return
     end
 
-    DebugInfo("print", "Optimal DeliveryHitbox found for enhanced TweenSteal", delivery)
-
-    -- Multiple target positions for better success rate
-    local targetPositions = {
-        delivery.CFrame * CFrame.new(0, random:NextNumber(-4, -1), 0),
-        delivery.CFrame * CFrame.new(random:NextNumber(-2, 2), random:NextNumber(-3, -1), random:NextNumber(-2, 2)),
-        delivery.CFrame * CFrame.new(random:NextNumber(-1, 1), random:NextNumber(-2, 0), random:NextNumber(-1, 1))
-    }
-
-    statusLabel.Text = "Ejecutando movimiento sigiloso..."
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-
-    -- Enhanced multi-method approach
-    local methods = {"curve", "zigzag", "spiral"}
-    local success = false
+    DebugInfo("print", "DeliveryHitbox found for direct TweenSteal", delivery)
     
-    for attempt = 1, 3 do
-        local method = methods[math.random(1, #methods)]
-        local targetCF = targetPositions[math.random(1, #targetPositions)]
-        
-        statusLabel.Text = "Intento " .. attempt .. "/3 - Método: " .. method
-        TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-        
-        task.spawn(function()
-            local moveSuccess = executeAdvancedMovement(targetCF, method)
-            if moveSuccess then
-                task.wait(random:NextNumber(0.1, 0.3))
-                performVoidSequence(targetCF, "high")
-                task.wait(random:NextNumber(0.2, 0.5))
-                
-                -- Final positioning
-                for i = 1, math.random(3, 7) do
-                    hrp.CFrame = targetCF * CFrame.new(
-                        random:NextNumber(-0.5, 0.5),
-                        random:NextNumber(-0.2, 0.2),
-                        random:NextNumber(-0.5, 0.5)
-                    )
-                    task.wait(random:NextNumber(0.01, 0.03))
-                end
-            end
-        end)
-        
-        task.wait(random:NextNumber(0.8, 1.5))
-        
-        -- Check success for this attempt
-        local bestDistance = math.huge
-        for _, targetCF in ipairs(targetPositions) do
-            local distance = (hrp.Position - targetCF.Position).Magnitude
-            if distance < bestDistance then
-                bestDistance = distance
-            end
-        end
-        
-        if bestDistance <= 25 then
-            success = true
-            break
-        end
-    end
+    statusLabel.Text = "Ejecutando teleporte directo..."
+    TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
 
-    -- Final result
-    task.wait(0.5)
+    -- Calculate optimal target position
+    local targetPosition = delivery.CFrame * CFrame.new(0, -2, 0)
+    
+    -- Execute direct teleport
+    local success = teleportDirect(targetPosition)
+    
+    -- Verify success
+    task.wait(0.3)
     local finalDistance = (hrp.Position - delivery.Position).Magnitude
     
-    if success and finalDistance <= 30 then
-        DebugInfo("print", "Enhanced TweenSteal succeeded", finalDistance)
-        statusLabel.Text = "¡TweenSteal Exitoso! Distancia: " .. math.floor(finalDistance) .. "m"
+    -- Additional precision attempts if needed
+    if finalDistance > 15 then
+        statusLabel.Text = "Ajustando posición..."
+        TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+        
+        -- Precision adjustment
+        for attempt = 1, 5 do
+            local preciseTarget = delivery.CFrame * CFrame.new(
+                random:NextNumber(-1, 1),
+                random:NextNumber(-3, -1),
+                random:NextNumber(-1, 1)
+            )
+            
+            for i = 1, 30 do
+                hrp.CFrame = preciseTarget
+                RunService.Heartbeat:Wait()
+            end
+            
+            -- Void and return
+            hrp.CFrame = CFrame.new(0, -3.4028234663852886e+38, 0)
+            task.wait(0.03)
+            hrp.CFrame = preciseTarget
+            task.wait(0.03)
+            
+            finalDistance = (hrp.Position - delivery.Position).Magnitude
+            if finalDistance <= 15 then
+                break
+            end
+        end
+    end
+
+    -- Final verification and result
+    finalDistance = (hrp.Position - delivery.Position).Magnitude
+    
+    if finalDistance <= 20 then
+        DebugInfo("print", "Direct TweenSteal succeeded", finalDistance)
+        statusLabel.Text = "¡TweenSteal Exitoso! ✓"
         statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
     else
-        DebugInfo("warn", "Enhanced TweenSteal failed", finalDistance)
-        statusLabel.Text = "TweenSteal Fallido: Muy lejos (" .. math.floor(finalDistance) .. "m)"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        DebugInfo("warn", "Direct TweenSteal needs retry", finalDistance)
+        statusLabel.Text = "Reintentando..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
+        
+        -- Emergency retry with forced positioning
+        local emergencyTarget = delivery.CFrame * CFrame.new(0, -1.5, 0)
+        for i = 1, 100 do
+            hrp.CFrame = emergencyTarget
+            RunService.Heartbeat:Wait()
+        end
+        
+        finalDistance = (hrp.Position - delivery.Position).Magnitude
+        if finalDistance <= 20 then
+            statusLabel.Text = "¡TweenSteal Exitoso! ✓"
+            statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+        else
+            statusLabel.Text = "Error: Reintenta en unos segundos"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        end
     end
     
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-    task.wait(3)
+    task.wait(2)
     TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
 end
 
