@@ -1,1279 +1,587 @@
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║                    ARBIX TWEEN STEAL ULTRA V3.0             ║
+-- ║              Versión mejorada por 1000 - Todo en Uno        ║
+-- ╚══════════════════════════════════════════════════════════════╝
 
 local TweenService = game:GetService("TweenService")
-local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
-
-local key = "moon"
-local discordLink = "https://discord.gg/EXK4dQxJBv"
-local scriptToLoad = [[
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local player = Players.LocalPlayer
 local random = Random.new()
 
---// Configuration
-local DEBUG = false
-local tpAmt
-local void = CFrame.new(0, -3.4028234663852886e+38, 0)
-local teleporting
+-- ═══════════════════════════════════════════════════════════════
+--                    CONFIGURACIÓN ULTRA AVANZADA
+-- ═══════════════════════════════════════════════════════════════
 
-local function DebugInfo(mode, content, value)
-    if not DEBUG then return end
-    if mode == "warn" then
-        warn("[MoonTP DEBUG]:", content, value or "")
-    elseif mode == "print" then
-        print("[MoonTP DEBUG]:", content, value or "")
-    else
-        warn("[MoonTP DEBUG]: Invalid debug type.")
-    end
-end
+local CONFIG = {
+    MOVEMENT = {
+        BASE_ITERATIONS = 180,
+        MAX_ITERATIONS = 350,
+        MIN_ITERATIONS = 60,
+        STEALTH_FACTOR = 0.92,
+        JITTER_INTENSITY = 0.0003,
+        CURVE_COMPLEXITY = 8,
+        NATURAL_DELAY_MIN = 0.002,
+        NATURAL_DELAY_MAX = 0.015,
+        BEZIER_SMOOTHNESS = 0.95
+    },
+    
+    ANTI_DETECTION = {
+        RANDOMIZE_PATTERNS = true,
+        USE_HEARTBEAT_SYNC = true,
+        MIMIC_HUMAN_MOVEMENT = true,
+        AVOID_PERFECT_PATHS = true,
+        DYNAMIC_TIMING = true,
+        MEMORY_FOOTPRINT_REDUCTION = true,
+        ANTICHEAT_EVASION = true
+    },
+    
+    TELEPORT = {
+        VOID_POSITIONS = {
+            CFrame.new(0, -3.4028234663852886e+38, 0),
+            CFrame.new(999999, -3.5e40, 999999),
+            CFrame.new(-999999, -3.2e40, -999999),
+            CFrame.new(0, -1.8e40, 0),
+            CFrame.new(500000, -4e40, -500000)
+        },
+        BURST_COUNT = 7,
+        VERIFICATION_ATTEMPTS = 4,
+        SAFETY_DISTANCE = 22,
+        POSITION_VARIANCE = Vector3.new(2.5, 1.2, 2.5),
+        TELEPORT_CHAOS_MODE = true
+    },
+    
+    PERFORMANCE = {
+        TRACK_STATS = true,
+        AUTO_OPTIMIZE = true,
+        ADAPTIVE_TIMING = true,
+        PING_COMPENSATION = true
+    },
+    
+    DEBUG = {
+        ENABLED = false,
+        VERBOSE_LOGGING = false,
+        SHOW_GUI_STATUS = true
+    }
+}
 
---// Player & Character setup
-local backpack = player:WaitForChild("Backpack")
+-- ═══════════════════════════════════════════════════════════════
+--                        VARIABLES GLOBALES
+-- ═══════════════════════════════════════════════════════════════
+
 local char, humanoid, hrp
+local isExecuting = false
+local performanceData = {
+    attempts = 0,
+    successes = 0,
+    avgTime = 0,
+    lastExecutionTime = 0,
+    bestTime = math.huge,
+    worstTime = 0
+}
 
-local function GetCharacter()
-    return player.Character or player.CharacterAdded:Wait()
-end
+-- ═══════════════════════════════════════════════════════════════
+--                      FUNCIONES AUXILIARES ULTRA
+-- ═══════════════════════════════════════════════════════════════
 
-local function SetupCharacter()
-    char = GetCharacter()
+local function setupCharacter()
+    char = player.Character or player.CharacterAdded:Wait()
     humanoid = char:WaitForChild("Humanoid")
     hrp = char:WaitForChild("HumanoidRootPart")
-    backpack = player:WaitForChild("Backpack")
-    DebugInfo("print", "Character setup completed for", player.Name)
+    return char and humanoid and hrp
 end
 
-SetupCharacter()
+setupCharacter()
+player.CharacterAdded:Connect(setupCharacter)
 
-player.CharacterAdded:Connect(function()
-    SetupCharacter()
-end)
-
---// Calculate tpAmt from Latency
-task.spawn(function()
-    while true do
-        local ping = player:GetNetworkPing() * 1000
-        tpAmt = math.clamp(math.floor(ping * 0.8), 10, 150)
-        if DEBUG then
-            DebugInfo("print", "Ping: " .. math.floor(ping) .. "ms | tpAmt:", tpAmt)
-        end
-        RunService.Heartbeat:Wait()
+local function UltraLog(level, message, data)
+    if not CONFIG.DEBUG.ENABLED then return end
+    local timestamp = os.date("%H:%M:%S")
+    local logMsg = string.format("[%s][%s]: %s", timestamp, level, message)
+    if data then logMsg = logMsg .. " | " .. tostring(data) end
+    
+    if level == "ERROR" or level == "WARN" then
+        warn("🔴 " .. logMsg)
+    else
+        print("🟢 " .. logMsg)
     end
-end)
-
-local function TweenSteal(statusLabel)
-    statusLabel.Text = "Iniciando TweenSteal seguro..."
-    statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-
-    local function isCharacterValid()
-        return char and char.Parent and hrp and hrp.Parent and humanoid and humanoid.Parent
-    end
-
-    local function findDeliveryHitbox()
-        for _, v in ipairs(workspace.Plots:GetDescendants()) do
-            if v.Name == "DeliveryHitbox" and v.Parent:FindFirstChild("PlotSign") then
-                if v.Parent.PlotSign:FindFirstChild("YourBase") and v.Parent.PlotSign.YourBase.Enabled then
-                    return v
-                end
-            end
-        end
-        return nil
 end
 
-    local function safeTeleport(targetCFrame)
-        if not isCharacterValid() or not targetCFrame then return false end
-        
-        local iterations = math.clamp(tpAmt or 60, 40, 100)
-        local safeVoid = CFrame.new(0, -1000, 0) -- Void más seguro
-        
-        -- Verificar posición inicial
-        local startPos = hrp.Position
-        
-        -- Fase 1: Teleportes directos al objetivo
-        for i = 1, iterations do
-            if not isCharacterValid() then 
-                DebugInfo("warn", "Character lost during teleport phase 1", nil)
-                return false 
-            end
-            
-            hrp.CFrame = targetCFrame * CFrame.new(
-                random:NextNumber(-0.0001, 0.0001),
-                random:NextNumber(-0.0001, 0.0001),
-                random:NextNumber(-0.0001, 0.0001)
-            )
-            RunService.Heartbeat:Wait()
+local function QuantumRandom(min, max, chaos)
+    chaos = chaos or 1
+    local seed = tick() * 1000 + math.random(1, 10000) * chaos
+    math.randomseed(seed)
+    
+    local algorithms = {
+        function() return math.random() * (max - min) + min end,
+        function() return random:NextNumber(min, max) end,
+        function() 
+            local noise = math.sin(seed * 0.007) * math.cos(seed * 0.013)
+            return ((max + min) / 2) + noise * (max - min) * 0.3
         end
-        
-        -- Verificar que seguimos en una posición válida
-        if not isCharacterValid() then
-            DebugInfo("warn", "Character lost after phase 1", nil)
-            return false
+    }
+    
+    local result = 0
+    for _, algo in ipairs(algorithms) do
+        result = result + algo()
+    end
+    
+    return result / #algorithms
+end
+
+local function DetectAdvancedAntiCheat()
+    local suspiciousElements = {
+        services = {"AntiCheatService", "SecurityService", "ModeratorService"},
+        keywords = {"anticheat", "detection", "ban", "kick", "exploit", "cheat"},
+        networkPatterns = {"AC_", "SECURITY_", "MOD_"}
+    }
+    
+    local threatLevel = 0
+    
+    -- Detectar servicios peligrosos
+    for _, serviceName in ipairs(suspiciousElements.services) do
+        if game:FindService(serviceName) then
+            threatLevel = threatLevel + 2
+            UltraLog("WARN", "Suspicious service detected", serviceName)
         end
-        
-        -- Fase 2: Secuencia void controlada
-        for i = 1, 2 do
-            if not isCharacterValid() then break end
-            
-            -- Void seguro
-            hrp.CFrame = safeVoid
-            task.wait(0.03)
-            
-            -- Verificar antes de regresar
-            if not isCharacterValid() then 
-                DebugInfo("warn", "Character lost in void", nil)
-                -- Intentar recuperar
-                task.wait(0.1)
-                if char and char.Parent then
-                    hrp = char:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        hrp.CFrame = targetCFrame
+    end
+    
+    -- Escanear scripts de forma segura
+    local function safeScanContainer(container)
+        pcall(function()
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+                    for _, keyword in ipairs(suspiciousElements.keywords) do
+                        if string.find(string.lower(child.Name), keyword) then
+                            threatLevel = threatLevel + 1
+                        end
                     end
                 end
-                break
             end
-            
-            hrp.CFrame = targetCFrame
-            task.wait(0.03)
-        end
+        end)
+    end
+    
+    safeScanContainer(ReplicatedStorage)
+    safeScanContainer(workspace)
+    
+    UltraLog("INFO", "Anti-cheat threat level", threatLevel)
+    return threatLevel
+end
+
+local function CalculateUltraOptimalSettings()
+    local ping = player:GetNetworkPing() * 1000
+    local fps = workspace:GetRealPhysicsFPS()
+    local playerCount = #Players:GetPlayers()
+    
+    -- Algoritmo avanzado de optimización
+    local pingFactor = math.clamp(math.log(ping + 1) / math.log(101), 0.4, 2.5)
+    local fpsFactor = math.clamp(fps / 60, 0.3, 2.0)
+    local crowdFactor = math.clamp(1 - (playerCount / 50), 0.5, 1.2)
+    
+    local optimalIterations = math.floor(CONFIG.MOVEMENT.BASE_ITERATIONS * pingFactor * fpsFactor * crowdFactor)
+    optimalIterations = math.clamp(optimalIterations, CONFIG.MOVEMENT.MIN_ITERATIONS, CONFIG.MOVEMENT.MAX_ITERATIONS)
+    
+    local optimalDelay = math.clamp(
+        (ping * 0.0008) + (1 / fps) * 0.5,
+        CONFIG.MOVEMENT.NATURAL_DELAY_MIN,
+        CONFIG.MOVEMENT.NATURAL_DELAY_MAX
+    )
+    
+    UltraLog("INFO", "Optimal settings calculated", string.format("Iter: %d, Delay: %.4f", optimalIterations, optimalDelay))
+    
+    return optimalIterations, optimalDelay, pingFactor
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                   ALGORITMO DE MOVIMIENTO CUÁNTICO
+-- ═══════════════════════════════════════════════════════════════
+
+local function QuantumStealthMovement(startPos, targetPos, iterations, naturalDelay)
+    if not hrp or not startPos or not targetPos then
+        UltraLog("ERROR", "Invalid parameters for quantum movement")
+        return false
+    end
+    
+    local startTime = tick()
+    local quantumPaths = {}
+    
+    -- Generar múltiples rutas cuánticas
+    for i = 1, iterations do
+        local progress = i / iterations
         
-        -- Verificación final
-        if not isCharacterValid() then
-            DebugInfo("warn", "Character lost during void sequence", nil)
-            return false
-        end
+        -- Algoritmo Bézier cuántico con 4 puntos de control
+        local p0 = startPos
+        local p1 = startPos:Lerp(targetPos, 0.33) + Vector3.new(
+            QuantumRandom(-5, 5, 2),
+            QuantumRandom(-2, 2, 1.5),
+            QuantumRandom(-5, 5, 2)
+        )
+        local p2 = startPos:Lerp(targetPos, 0.66) + Vector3.new(
+            QuantumRandom(-3, 3, 1.8),
+            QuantumRandom(-1, 1, 1.2),
+            QuantumRandom(-3, 3, 1.8)
+        )
+        local p3 = targetPos
         
-        -- Fase 3: Posicionamiento final suave
-        for i = 1, 10 do
-            if not isCharacterValid() then break end
-            
-            hrp.CFrame = targetCFrame * CFrame.new(
-                random:NextNumber(-0.05, 0.05),
-                0,
-                random:NextNumber(-0.05, 0.05)
-            )
+        -- Curva Bézier cúbica
+        local t = progress
+        local bezierPos = (1-t)^3 * p0 + 3*(1-t)^2*t * p1 + 3*(1-t)*t^2 * p2 + t^3 * p3
+        
+        -- Ruido cuántico multidimensional
+        local quantumNoise = Vector3.new(
+            math.sin(progress * math.pi * CONFIG.MOVEMENT.CURVE_COMPLEXITY) * CONFIG.MOVEMENT.JITTER_INTENSITY,
+            math.cos(progress * math.pi * CONFIG.MOVEMENT.CURVE_COMPLEXITY * 1.7) * CONFIG.MOVEMENT.JITTER_INTENSITY,
+            math.sin(progress * math.pi * CONFIG.MOVEMENT.CURVE_COMPLEXITY * 0.9) * CONFIG.MOVEMENT.JITTER_INTENSITY
+        )
+        
+        -- Aplicar caos controlado
+        local chaosVector = Vector3.new(
+            QuantumRandom(-CONFIG.MOVEMENT.JITTER_INTENSITY, CONFIG.MOVEMENT.JITTER_INTENSITY, 3),
+            QuantumRandom(-CONFIG.MOVEMENT.JITTER_INTENSITY, CONFIG.MOVEMENT.JITTER_INTENSITY, 2),
+            QuantumRandom(-CONFIG.MOVEMENT.JITTER_INTENSITY, CONFIG.MOVEMENT.JITTER_INTENSITY, 3)
+        )
+        
+        quantumPaths[i] = bezierPos + quantumNoise + chaosVector
+    end
+    
+    -- Ejecutar movimiento cuántico
+    for i, position in ipairs(quantumPaths) do
+        if not hrp or not hrp.Parent then break end
+        
+        -- Rotación cuántica
+        local currentRotation = hrp.CFrame - hrp.Position
+        local quantumRotation = CFrame.Angles(
+            QuantumRandom(-0.008, 0.008, 1.5),
+            QuantumRandom(-0.008, 0.008, 1.5),
+            QuantumRandom(-0.008, 0.008, 1.5)
+        )
+        
+        hrp.CFrame = CFrame.new(position) * currentRotation * quantumRotation
+        
+        -- Timing cuántico adaptativo
+        local quantumDelay = naturalDelay + QuantumRandom(-naturalDelay * 0.4, naturalDelay * 0.4, 2)
+        
+        if CONFIG.ANTI_DETECTION.USE_HEARTBEAT_SYNC and i % 3 == 0 then
             RunService.Heartbeat:Wait()
+        else
+            task.wait(quantumDelay)
         end
         
-        return isCharacterValid()
+        -- Verificación de integridad cuántica
+        if i % 15 == 0 then
+            if not hrp.Parent or not char.Parent then
+                UltraLog("WARN", "Character integrity lost during quantum movement")
+                return false
+            end
+        end
+    end
+    
+    local executionTime = tick() - startTime
+    UltraLog("SUCCESS", "Quantum movement completed", string.format("Time: %.3fs", executionTime))
+    return true
 end
 
-    -- Verificar estado inicial
-    if not isCharacterValid() then
-        statusLabel.Text = "Error: Personaje no válido"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-        task.wait(2)
-        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        return
+-- ═══════════════════════════════════════════════════════════════
+--                    BUSCADOR INTELIGENTE DE OBJETIVOS
+-- ═══════════════════════════════════════════════════════════════
+
+local function FindQuantumDeliveryTarget()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then
+        UltraLog("ERROR", "Plots folder not found in workspace")
+        return nil
     end
-
-    -- Buscar delivery hitbox
-    local delivery = findDeliveryHitbox()
-    if not delivery then
-        statusLabel.Text = "Error: No se encontró DeliveryHitbox"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-        task.wait(2)
-        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        return
-    end
-
-    DebugInfo("print", "DeliveryHitbox found for safe TweenSteal", delivery)
     
-    statusLabel.Text = "Ejecutando teleporte seguro..."
-    TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-
-    -- Guardar posición inicial por seguridad
-    local originalPosition = hrp.CFrame
+    local validTargets = {}
+    local currentTime = tick()
     
-    -- Calcular posición objetivo
-    local targetPosition = delivery.CFrame * CFrame.new(0, -2, 0)
-    
-    -- Ejecutar teleporte seguro
-    local success = safeTeleport(targetPosition)
-    
-    -- Verificar resultado
-    task.wait(0.2)
-    
-    if not isCharacterValid() then
-        statusLabel.Text = "Error: Personaje perdido, restaurando..."
-        statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
-        TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-        
-        -- Intentar restaurar personaje
-        task.wait(0.5)
-        if char and char.Parent then
-            hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.CFrame = originalPosition
-                statusLabel.Text = "Personaje restaurado, reintenta"
-                statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    else
-                statusLabel.Text = "Error: No se pudo restaurar"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    for _, plot in pairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        if sign then
+            local yourBase = sign:FindFirstChild("YourBase")
+            if yourBase and yourBase.Enabled then
+                local hitbox = plot:FindFirstChild("DeliveryHitbox")
+                if hitbox then
+                    local distance = (hitbox.Position - hrp.Position).Magnitude
+                    local accessibility = 1 / (distance + 1)
+                    local priority = accessibility * (1 + math.sin(currentTime + distance) * 0.1)
+                    
+                    table.insert(validTargets, {
+                        hitbox = hitbox,
+                        distance = distance,
+                        priority = priority,
+                        plot = plot
+                    })
+                end
             end
-    end
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-    task.wait(2)
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        return
+        end
     end
     
-    local finalDistance = (hrp.Position - delivery.Position).Magnitude
+    if #validTargets == 0 then
+        UltraLog("WARN", "No valid delivery targets found")
+        return nil
+    end
     
-    -- Ajuste de precisión si es necesario (sin void)
-    if finalDistance > 15 and isCharacterValid() then
-        statusLabel.Text = "Ajuste de precisión..."
-        TweenService:Create(statusLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+    -- Selección inteligente basada en prioridad
+    table.sort(validTargets, function(a, b) return a.priority > b.priority end)
+    local selectedTarget = validTargets[1]
+    
+    UltraLog("SUCCESS", "Optimal target selected", string.format("Distance: %.2f, Priority: %.3f", selectedTarget.distance, selectedTarget.priority))
+    return selectedTarget.hitbox
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                  SECUENCIA DE TELEPORT CUÁNTICO
+-- ═══════════════════════════════════════════════════════════════
+
+local function ExecuteQuantumTeleportSequence(targetCFrame)
+    local voidPositions = CONFIG.TELEPORT.VOID_POSITIONS
+    local success = false
+    
+    for attempt = 1, CONFIG.TELEPORT.VERIFICATION_ATTEMPTS do
+        UltraLog("INFO", "Starting quantum teleport sequence", string.format("Attempt: %d", attempt))
         
-        for attempt = 1, 3 do
-            if not isCharacterValid() then break end
+        -- Aplicar variación cuántica
+        local variance = CONFIG.TELEPORT.POSITION_VARIANCE
+        local quantumVariation = Vector3.new(
+            QuantumRandom(-variance.X, variance.X, 2),
+            QuantumRandom(-variance.Y, variance.Y, 1.5),
+            QuantumRandom(-variance.Z, variance.Z, 2)
+        )
+        
+        local finalTarget = targetCFrame + quantumVariation
+        
+        -- Secuencia de teleports cuánticos con caos controlado
+        for burst = 1, CONFIG.TELEPORT.BURST_COUNT do
+            -- Teleport al void cuántico
+            local randomVoidIndex = math.random(1, #voidPositions)
+            local quantumVoid = voidPositions[randomVoidIndex]
             
-            local preciseTarget = delivery.CFrame * CFrame.new(
-                random:NextNumber(-1, 1),
-                random:NextNumber(-2.5, -1.5),
-                random:NextNumber(-1, 1)
+            hrp.CFrame = quantumVoid
+            task.wait(QuantumRandom(0.03, 0.12, 2))
+            
+            -- Teleport al objetivo con microvariación
+            local microVariation = Vector3.new(
+                QuantumRandom(-0.5, 0.5, 3),
+                QuantumRandom(-0.2, 0.2, 2),
+                QuantumRandom(-0.5, 0.5, 3)
             )
             
-            -- Teleporte directo sin void
-            for i = 1, 20 do
-                if not isCharacterValid() then break end
-                hrp.CFrame = preciseTarget
-                RunService.Heartbeat:Wait()
-            end
+            hrp.CFrame = finalTarget + microVariation
+            task.wait(QuantumRandom(0.02, 0.08, 2.5))
             
-            finalDistance = (hrp.Position - delivery.Position).Magnitude
-            if finalDistance <= 15 then break end
+            -- Teleport intermedio aleatorio (técnica anti-detección)
+            if burst % 2 == 0 then
+                local intermedio = finalTarget + Vector3.new(
+                    QuantumRandom(-10, 10, 1),
+                    QuantumRandom(5, 15, 1),
+                    QuantumRandom(-10, 10, 1)
+                )
+                hrp.CFrame = CFrame.new(intermedio.Position)
+                task.wait(QuantumRandom(0.01, 0.05, 3))
+                hrp.CFrame = finalTarget
+            end
         end
-    end
-
-    -- Resultado final
-    if isCharacterValid() then
-        finalDistance = (hrp.Position - delivery.Position).Magnitude
         
-        if finalDistance <= 20 then
-            DebugInfo("print", "Safe TweenSteal succeeded", finalDistance)
-            statusLabel.Text = "¡TweenSteal Exitoso! ✓"
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-    else
-            statusLabel.Text = "Parcialmente exitoso (dist: " .. math.floor(finalDistance) .. "m)"
-            statusLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
+        -- Verificación cuántica
+        task.wait(0.6)
+        local distance = (hrp.Position - finalTarget.Position).Magnitude
+        local isSuccess = distance <= CONFIG.TELEPORT.SAFETY_DISTANCE
+        
+        if isSuccess then
+            success = true
+            UltraLog("SUCCESS", "Quantum teleport sequence successful", string.format("Final distance: %.2f", distance))
+            break
+        else
+            UltraLog("WARN", "Quantum teleport attempt failed", string.format("Attempt %d failed, distance: %.2f", attempt, distance))
         end
-    else
-        statusLabel.Text = "Error: Personaje inestable"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        
+        if attempt < CONFIG.TELEPORT.VERIFICATION_ATTEMPTS then
+            task.wait(QuantumRandom(0.4, 1.2, 1.5))
+        end
     end
     
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-    task.wait(2)
-    TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    return success
 end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MoonTPGui"
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-DebugInfo("print", "MoonTPGui created", ScreenGui.Name)
+-- ═══════════════════════════════════════════════════════════════
+--                   FUNCIÓN PRINCIPAL TWEEN STEAL ULTRA
+-- ═══════════════════════════════════════════════════════════════
 
-local Blur = Instance.new("BlurEffect")
-Blur.Name = "MoonTPBlur"
-Blur.Size = 0
-Blur.Parent = workspace
-DebugInfo("print", "MoonTPBlur created", Blur.Name)
-
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
-Frame.BorderSizePixel = 0
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-Frame.Size = UDim2.new(0, 0, 0, 0)
-Frame.ClipsDescendants = true
-Frame.BackgroundTransparency = 1
-
-local Gradient = Instance.new("UIGradient")
-Gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 30, 45)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 20, 35))
-})
-Gradient.Rotation = 45
-Gradient.Parent = Frame
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 16)
-UICorner.Parent = Frame
-
-local DropShadow = Instance.new("ImageLabel")
-DropShadow.Name = "DropShadow"
-DropShadow.Parent = Frame
-DropShadow.AnchorPoint = Vector2.new(0.5, 0.5)
-DropShadow.BackgroundTransparency = 1
-DropShadow.Position = UDim2.new(0.5, 0, 0.5, 8)
-DropShadow.Size = UDim2.new(1, 24, 1, 24)
-DropShadow.Image = "rbxassetid://6014261993"
-DropShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-DropShadow.ImageTransparency = 0.6
-DropShadow.ScaleType = Enum.ScaleType.Slice
-DropShadow.SliceCenter = Rect.new(10, 10, 118, 118)
-DropShadow.ZIndex = -1
-DropShadow.Visible = false
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Parent = Frame
-TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-TitleBar.BorderSizePixel = 0
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
-TitleBar.ZIndex = 2
-
-local TitleBarGradient = Instance.new("UIGradient")
-TitleBarGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
-})
-TitleBarGradient.Parent = TitleBar
-
-local TitleBarCorner = Instance.new("UICorner")
-TitleBarCorner.CornerRadius = UDim.new(0, 16)
-TitleBarCorner.Parent = TitleBar
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "Title"
-TitleLabel.Parent = TitleBar
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Size = UDim2.new(1, -80, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "🌙 MOON SCRIPTS"
-TitleLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
-TitleLabel.TextSize = 18
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.TextTransparency = 1
-
-local ButtonFrame = Instance.new("Frame")
-ButtonFrame.Parent = TitleBar
-ButtonFrame.BackgroundTransparency = 1
-ButtonFrame.Size = UDim2.new(0, 80, 1, 0)
-ButtonFrame.Position = UDim2.new(1, -80, 0, 0)
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Parent = ButtonFrame
-CloseButton.AnchorPoint = Vector2.new(0.5, 0.5)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Position = UDim2.new(0.65, 0, 0.5, 0)
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 80, 80)
-CloseButton.TextSize = 16
-CloseButton.TextTransparency = 1
-
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = ButtonFrame
-MinimizeButton.AnchorPoint = Vector2.new(0.5, 0.5)
-MinimizeButton.BackgroundTransparency = 1
-MinimizeButton.Position = UDim2.new(0.95, 0, 0.5, 0)
-MinimizeButton.Size = UDim2.new(0, 24, 0, 24)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.Text = "—"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 204, 0)
-MinimizeButton.TextSize = 16
-MinimizeButton.TextTransparency = 1
-
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Parent = Frame
-Content.BackgroundTransparency = 1
-Content.Position = UDim2.new(0, 0, 0, 40)
-Content.Size = UDim2.new(1, 0, 1, -40)
-
-local TweenStealButton = Instance.new("TextButton")
-TweenStealButton.Name = "TweenStealButton"
-TweenStealButton.Parent = Content
-TweenStealButton.BackgroundColor3 = Color3.fromRGB(70, 90, 160)
-TweenStealButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TweenStealButton.Position = UDim2.new(0.1, 0, 0.25, 0)
-TweenStealButton.Size = UDim2.new(0.8, 0, 0, 50)
-TweenStealButton.Font = Enum.Font.GothamSemibold
-TweenStealButton.Text = "🌙 TWEEN STEAL"
-TweenStealButton.TextSize = 18
-TweenStealButton.TextWrapped = true
-TweenStealButton.TextTransparency = 1
-TweenStealButton.AutoButtonColor = false
-
-local UICorner_TweenSteal = Instance.new("UICorner")
-UICorner_TweenSteal.CornerRadius = UDim.new(0, 12)
-UICorner_TweenSteal.Parent = TweenStealButton
-
-local TweenStealStroke = Instance.new("UIStroke")
-TweenStealStroke.Parent = TweenStealButton
-TweenStealStroke.Color = Color3.fromRGB(100, 120, 200)
-TweenStealStroke.Thickness = 2
-TweenStealStroke.Transparency = 0.5
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Name = "StatusLabel"
-StatusLabel.Parent = Content
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Size = UDim2.new(0.8, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0.1, 0, 0.55, 0)
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-StatusLabel.TextSize = 14
-StatusLabel.TextTransparency = 1
-StatusLabel.Text = ""
-StatusLabel.TextWrapped = true
-
-local function createHoverEffect(button, stroke)
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 140, 255),
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        }):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 100, 220),
-            Thickness = 3,
-            Transparency = 0.2
-        }):Play()
-    end)
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 120, 255),
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        }):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 80, 200),
-            Thickness = 2,
-            Transparency = 0.5
-        }):Play()
-    end)
+local function TweenStealQuantumUltra()
+    if isExecuting then
+        print("⚠️ TweenSteal ya está ejecutándose...")
+        return false
+    end
+    
+    isExecuting = true
+    local startTime = tick()
+    performanceData.attempts = performanceData.attempts + 1
+    
+    print("🚀 Iniciando TweenSteal Quantum Ultra...")
+    UltraLog("INFO", "Starting TweenSteal Quantum Ultra execution")
+    
+    -- Verificaciones cuánticas iniciales
+    if not setupCharacter() then
+        UltraLog("ERROR", "Character setup failed")
+        print("❌ Error: Configuración de personaje falló")
+        isExecuting = false
+        return false
+    end
+    
+    -- Análisis de amenazas
+    local threatLevel = DetectAdvancedAntiCheat()
+    if threatLevel > 4 then
+        UltraLog("WARN", "High threat level detected, adjusting stealth parameters", threatLevel)
+        CONFIG.MOVEMENT.BASE_ITERATIONS = CONFIG.MOVEMENT.BASE_ITERATIONS * 1.8
+        CONFIG.MOVEMENT.NATURAL_DELAY_MAX = CONFIG.MOVEMENT.NATURAL_DELAY_MAX * 2.5
+        CONFIG.TELEPORT.BURST_COUNT = math.max(3, CONFIG.TELEPORT.BURST_COUNT - 2)
+        print("🛡️ Modo sigiloso ultra activado debido a detección de amenazas")
+    end
+    
+    -- Buscar objetivo cuántico
+    print("🎯 Buscando objetivo óptimo...")
+    local targetHitbox = FindQuantumDeliveryTarget()
+    if not targetHitbox then
+        print("❌ Error: No se encontró objetivo válido")
+        isExecuting = false
+        return false
+    end
+    
+    -- Calcular configuración óptima
+    local iterations, naturalDelay, pingFactor = CalculateUltraOptimalSettings()
+    print(string.format("⚙️ Configuración óptima: %d iteraciones, %.4f delay, ping factor: %.2f", iterations, naturalDelay, pingFactor))
+    
+    -- Preparar coordenadas cuánticas
+    local startPosition = hrp.Position
+    local targetPosition = targetHitbox.CFrame.Position + Vector3.new(0, -2.5, 0)
+    
+    -- FASE 1: Movimiento Cuántico Sigiloso
+    print("🌀 FASE 1: Ejecutando movimiento cuántico sigiloso...")
+    UltraLog("INFO", "Phase 1: Starting quantum stealth movement")
+    
+    local movementSuccess = QuantumStealthMovement(startPosition, targetPosition, iterations, naturalDelay)
+    
+    if not movementSuccess then
+        UltraLog("ERROR", "Quantum stealth movement failed")
+        print("❌ Error: Movimiento cuántico sigiloso falló")
+        isExecuting = false
+        return false
+    end
+    
+    task.wait(QuantumRandom(0.3, 0.8, 1))
+    
+    -- FASE 2: Secuencia de Teleport Cuántico
+    print("⚡ FASE 2: Ejecutando secuencia de teleport cuántico...")
+    UltraLog("INFO", "Phase 2: Starting quantum teleport sequence")
+    
+    local teleportTarget = targetHitbox.CFrame * CFrame.new(0, -2.5, 0)
+    local teleportSuccess = ExecuteQuantumTeleportSequence(teleportTarget)
+    
+    -- Verificación final cuántica
+    task.wait(1.2)
+    local finalDistance = (hrp.Position - teleportTarget.Position).Magnitude
+    local finalSuccess = finalDistance <= CONFIG.TELEPORT.SAFETY_DISTANCE
+    
+    -- Calcular estadísticas cuánticas
+    local executionTime = tick() - startTime
+    performanceData.lastExecutionTime = executionTime
+    
+    if executionTime < performanceData.bestTime then
+        performanceData.bestTime = executionTime
+    end
+    if executionTime > performanceData.worstTime then
+        performanceData.worstTime = executionTime
+    end
+    
+    if finalSuccess then
+        performanceData.successes = performanceData.successes + 1
+        performanceData.avgTime = (performanceData.avgTime * (performanceData.successes - 1) + executionTime) / performanceData.successes
+        
+        UltraLog("SUCCESS", "TweenSteal Quantum Ultra completed successfully", 
+                string.format("Time: %.2fs, Distance: %.2f", executionTime, finalDistance))
+        
+        print(string.format("✅ ¡TweenSteal Quantum Ultra EXITOSO! (%.2fs, %.1fm)", executionTime, finalDistance))
+        
+        -- Mostrar estadísticas
+        local successRate = (performanceData.successes / performanceData.attempts) * 100
+        print(string.format("📊 Estadísticas: %d/%d éxitos (%.1f%%), Mejor: %.2fs, Promedio: %.2fs", 
+            performanceData.successes, performanceData.attempts, successRate, performanceData.bestTime, performanceData.avgTime))
+        
+        isExecuting = false
+        return true
+    else
+        UltraLog("ERROR", "TweenSteal Quantum Ultra failed", 
+                string.format("Time: %.2fs, Distance: %.2f", executionTime, finalDistance))
+        
+        print(string.format("❌ TweenSteal Quantum Ultra falló: Muy lejos (%.1fm)", finalDistance))
+        isExecuting = false
+        return false
+    end
 end
 
-createHoverEffect(TweenStealButton, TweenStealStroke)
+-- ═══════════════════════════════════════════════════════════════
+--                        CONTROLES Y ACTIVACIÓN
+-- ═══════════════════════════════════════════════════════════════
 
--- Initial animation
-task.wait(0.1)
-TweenService:Create(Blur, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = 15}):Play()
-TweenService:Create(Frame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 450, 0, 200),
-    BackgroundTransparency = 0,
-    BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-}):Play()
-DropShadow.Visible = true
-TweenService:Create(DropShadow, TweenInfo.new(0.6), {ImageTransparency = 0.6}):Play()
-
-task.wait(0.3)
-TweenService:Create(TitleLabel, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(CloseButton, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(MinimizeButton, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-
-task.wait(0.2)
-TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-    TextTransparency = 0,
-    BackgroundTransparency = 0
-}):Play()
-TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-
-TweenStealButton.MouseButton1Click:Connect(function()
-    DebugInfo("print", "TweenSteal button clicked", "")
-    TweenSteal(StatusLabel)
-end)
-
--- Mejorar botón de minimizar
-MinimizeButton.Size = UDim2.new(0, 36, 0, 36)
-MinimizeButton.TextSize = 22
-
--- Efecto hover para el botón minimizar
-MinimizeButton.MouseEnter:Connect(function()
-    TweenService:Create(MinimizeButton, TweenInfo.new(0.2), {
-        TextColor3 = Color3.fromRGB(255, 255, 100),
-        TextSize = 26
-    }):Play()
-end)
-MinimizeButton.MouseLeave:Connect(function()
-    TweenService:Create(MinimizeButton, TweenInfo.new(0.2), {
-        TextColor3 = Color3.fromRGB(255, 204, 0),
-        TextSize = 22
-    }):Play()
-end)
-
-local isMinimized = false
-local originalSize = UDim2.new(0, 450, 0, 200)
-local minimizedSize = UDim2.new(0, 120, 0, 40)
-
--- Variables para drag personalizado en modo minimizado
-local isDraggingMinimized = false
-local lastMinimizedPosition = UDim2.new(1, -140, 0, 20)
-
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    local targetSize = isMinimized and minimizedSize or originalSize
-    local contentTransparency = isMinimized and 1 or 0
-    
-    -- Guardar posición actual si se está minimizando
-    if isMinimized then
-        lastMinimizedPosition = Frame.Position
-    end
-    
-    -- Hacer la ventana minimizada más visible y estilizada
-    if isMinimized then
-        -- Posición en la esquina superior derecha cuando se minimiza
-        Frame.Position = UDim2.new(1, -140, 0, 20)
-        
-        -- Estilo especial para ventana minimizada tipo botón
-    TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Size = targetSize,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 40),
-            Position = UDim2.new(1, -140, 0, 20)
-    }):Play()
-    
-        -- Hacer la barra de título igual al fondo para que parezca un botón
-        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
-            BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    }):Play()
-    
-        -- Hacer que el UICorner sea más redondeado para look de botón
-        TweenService:Create(UICorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 20)
-        }):Play()
-        TweenService:Create(TitleBarCorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 20)
-    }):Play()
-    
-        -- Hacer el título más prominente en modo minimizado
-        TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
-            TextSize = 14,
-            TextColor3 = Color3.fromRGB(180, 200, 255),
-            Text = "🌙 MOON"
-        }):Play()
-    else
-        -- Restaurar posición y estilo original
-        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-            Size = targetSize,
-            BackgroundColor3 = Color3.fromRGB(10, 10, 15),
-            Position = lastMinimizedPosition
-    }):Play()
-    
-        -- Restaurar barra de título original
-        TweenService:Create(TitleBar, TweenInfo.new(0.4), {
-            BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    }):Play()
-    
-        -- Restaurar esquinas originales
-        TweenService:Create(UICorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 16)
-        }):Play()
-        TweenService:Create(TitleBarCorner, TweenInfo.new(0.4), {
-            CornerRadius = UDim.new(0, 16)
-    }):Play()
-    
-        TweenService:Create(TitleLabel, TweenInfo.new(0.4), {
-            TextSize = 18,
-            TextColor3 = Color3.fromRGB(200, 220, 255),
-            Text = "🌙 MOON SCRIPTS"
-        }):Play()
-    end
-    
-    TweenService:Create(Content, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Visible = not isMinimized
-    }):Play()
-    
-    TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-        ImageTransparency = 0.6,
-        Visible = true
-    }):Play()
-    
-    TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency,
-        BackgroundTransparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Transparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency
-    }):Play()
-    
-    MinimizeButton.Text = isMinimized and "□" or "—"
-    MinimizeButton.TextSize = isMinimized and 16 or 22
-    
-    DebugInfo("print", "Minimize toggled", isMinimized and "Minimized" or "Restored")
-end)
-
-CloseButton.MouseButton1Click:Connect(function()
-    TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Size = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-    task.wait(0.4)
-    ScreenGui:Destroy()
-    Blur:Destroy()
-    DebugInfo("print", "MoonTPGui closed", "")
-end)
-
-local isGuiVisible = true
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        isGuiVisible = not isGuiVisible
-        if isGuiVisible then
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = isMinimized and minimizedSize or originalSize,
-                BackgroundColor3 = Color3.fromRGB(10, 10, 15),
-                BackgroundTransparency = 0
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 15}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-                ImageTransparency = 0.6,
-                Visible = true
-            }):Play()
-            TweenService:Create(Content, TweenInfo.new(0.4), {
-                Visible = not isMinimized
-            }):Play()
-            if not isMinimized then
-                TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                    TextTransparency = 0,
-                    BackgroundTransparency = 0
-                }):Play()
-                TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-                TweenService:Create(StatusLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
-            end
-            DebugInfo("print", "MoonTPGui shown", "")
-        else
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                Size = UDim2.new(0, 0, 0, 0),
-                BackgroundTransparency = 1
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {ImageTransparency = 1}):Play()
-            DebugInfo("print", "MoonTPGui hidden", "")
-        end
-    end
-end)
-
-local dragging = false
-local dragInput, dragStart, startPos
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        local goal = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-        
-        -- Aplicar límites de pantalla para evitar que la ventana se pierda
-        local screenSize = workspace.CurrentCamera.ViewportSize
-        local frameSize = isMinimized and minimizedSize or originalSize
-        
-        -- Límites ajustados
-        local minX = -frameSize.X.Offset + 50  -- Permitir que se oculte parcialmente
-        local maxX = screenSize.X - 50         -- Mantener al menos 50px visibles
-        local minY = 0                         -- No permitir ir arriba de la pantalla
-        local maxY = screenSize.Y - frameSize.Y.Offset -- No ir abajo de la pantalla
-        
-        -- Aplicar límites
-        local clampedX = math.clamp(goal.X.Offset, minX, maxX)
-        local clampedY = math.clamp(goal.Y.Offset, minY, maxY)
-        
-        local finalGoal = UDim2.new(goal.X.Scale, clampedX, goal.Y.Scale, clampedY)
-        
-        -- Guardar la posición si está minimizada para recordarla
-        if isMinimized then
-            lastMinimizedPosition = finalGoal
-        end
-        
-        -- Movimiento más suave para ventana minimizada
-        local tweenTime = isMinimized and 0.02 or 0.05
-        Frame:TweenPosition(finalGoal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, tweenTime, true)
-    end
-end)
-
--- Hacer que la ventana minimizada se pueda expandir haciendo click en el texto
-TitleLabel.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and isMinimized then
-        MinimizeButton.MouseButton1Click:Fire()
-    end
-end)
-
-DebugInfo("print", "MoonTPGui initialization completed", "")
-]]
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MoonHub"
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = Player:WaitForChild("PlayerGui")
-
-local Blur = Instance.new("BlurEffect")
-Blur.Name = "MoonBlur"
-Blur.Size = 0
-Blur.Parent = Lighting
-
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-Frame.BorderSizePixel = 0
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-Frame.Size = UDim2.new(0, 0, 0, 0)
-Frame.ClipsDescendants = true
-Frame.BackgroundTransparency = 1
-
-local Gradient = Instance.new("UIGradient")
-Gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 30)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 20))
-})
-Gradient.Rotation = 45
-Gradient.Parent = Frame
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 16)
-UICorner.Parent = Frame
-
-local DropShadow = Instance.new("ImageLabel")
-DropShadow.Name = "DropShadow"
-DropShadow.Parent = Frame
-DropShadow.AnchorPoint = Vector2.new(0.5, 0.5)
-DropShadow.BackgroundTransparency = 1
-DropShadow.Position = UDim2.new(0.5, 0, 0.5, 8)
-DropShadow.Size = UDim2.new(1, 24, 1, 24)
-DropShadow.Image = "rbxassetid://6014261993"
-DropShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-DropShadow.ImageTransparency = 0.6
-DropShadow.ScaleType = Enum.ScaleType.Slice
-DropShadow.SliceCenter = Rect.new(10, 10, 118, 118)
-DropShadow.ZIndex = -1
-DropShadow.Visible = false
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Parent = Frame
-TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-TitleBar.BorderSizePixel = 0
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
-TitleBar.ZIndex = 2
-
-local TitleBarGradient = Instance.new("UIGradient")
-TitleBarGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
-})
-TitleBarGradient.Parent = TitleBar
-
-local TitleBarCorner = Instance.new("UICorner")
-TitleBarCorner.CornerRadius = UDim.new(0, 16)
-TitleBarCorner.Parent = TitleBar
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "Title"
-TitleLabel.Parent = TitleBar
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Size = UDim2.new(1, -80, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "MOON HUB"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 20
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.TextTransparency = 1
-
-local ButtonFrame = Instance.new("Frame")
-ButtonFrame.Parent = TitleBar
-ButtonFrame.BackgroundTransparency = 1
-ButtonFrame.Size = UDim2.new(0, 80, 1, 0)
-ButtonFrame.Position = UDim2.new(1, -80, 0, 0)
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Parent = ButtonFrame
-CloseButton.AnchorPoint = Vector2.new(0.5, 0.5)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Position = UDim2.new(0.65, 0, 0.5, 0)
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 80, 80)
-CloseButton.TextSize = 16
-CloseButton.TextTransparency = 1
-
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = ButtonFrame
-MinimizeButton.AnchorPoint = Vector2.new(0.5, 0.5)
-MinimizeButton.BackgroundTransparency = 1
-MinimizeButton.Position = UDim2.new(0.95, 0, 0.5, 0)
-MinimizeButton.Size = UDim2.new(0, 24, 0, 24)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.Text = "—"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 204, 0)
-MinimizeButton.TextSize = 16
-MinimizeButton.TextTransparency = 1
-
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Parent = Frame
-Content.BackgroundTransparency = 1
-Content.Position = UDim2.new(0, 0, 0, 40)
-Content.Size = UDim2.new(1, 0, 1, -40)
-
-local InputBox = Instance.new("TextBox")
-InputBox.Name = "InputBox"
-InputBox.Parent = Content
-InputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "Enter access code"
-InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
-InputBox.BorderSizePixel = 0
-InputBox.Position = UDim2.new(0.1, 0, 0.15, 0)
-InputBox.Size = UDim2.new(0.8, 0, 0, 50)
-InputBox.Font = Enum.Font.Gotham
-InputBox.Text = ""
-InputBox.TextSize = 18
-InputBox.TextWrapped = true
-InputBox.TextTransparency = 1
-InputBox.ClearTextOnFocus = false
-
-local UICorner_Input = Instance.new("UICorner")
-UICorner_Input.CornerRadius = UDim.new(0, 12)
-UICorner_Input.Parent = InputBox
-
-local InputStroke = Instance.new("UIStroke")
-InputStroke.Parent = InputBox
-InputStroke.Color = Color3.fromRGB(60, 60, 70)
-InputStroke.Thickness = 2
-InputStroke.Transparency = 1
-
-local ButtonContainer = Instance.new("Frame")
-ButtonContainer.Parent = Content
-ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.Size = UDim2.new(0.8, 0, 0, 50)
-ButtonContainer.Position = UDim2.new(0.1, 0, 0.35, 0)
-
-local SubmitButton = Instance.new("TextButton")
-SubmitButton.Name = "SubmitButton"
-SubmitButton.Parent = ButtonContainer
-SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitButton.Position = UDim2.new(0, 0, 0, 0)
-SubmitButton.Size = UDim2.new(0.48, -5, 1, 0)
-SubmitButton.Font = Enum.Font.GothamSemibold
-SubmitButton.Text = "SUBMIT CODE"
-SubmitButton.TextSize = 18
-SubmitButton.TextWrapped = true
-SubmitButton.TextTransparency = 1
-SubmitButton.AutoButtonColor = false
-
-local UICorner_Submit = Instance.new("UICorner")
-UICorner_Submit.CornerRadius = UDim.new(0, 12)
-UICorner_Submit.Parent = SubmitButton
-
-local SubmitStroke = Instance.new("UIStroke")
-SubmitStroke.Parent = SubmitButton
-SubmitStroke.Color = Color3.fromRGB(0, 80, 200)
-SubmitStroke.Thickness = 2
-SubmitStroke.Transparency = 0.5
-
-local GetCodeButton = Instance.new("TextButton")
-GetCodeButton.Name = "GetCodeButton"
-GetCodeButton.Parent = ButtonContainer
-GetCodeButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-GetCodeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetCodeButton.Position = UDim2.new(0.52, 5, 0, 0)
-GetCodeButton.Size = UDim2.new(0.48, -5, 1, 0)
-GetCodeButton.Font = Enum.Font.GothamSemibold
-GetCodeButton.Text = "GET CODE"
-GetCodeButton.TextSize = 18
-GetCodeButton.TextWrapped = true
-GetCodeButton.TextTransparency = 1
-GetCodeButton.AutoButtonColor = false
-
-local UICorner_GetCode = Instance.new("UICorner")
-UICorner_GetCode.CornerRadius = UDim.new(0, 12)
-UICorner_GetCode.Parent = GetCodeButton
-
-local GetCodeStroke = Instance.new("UIStroke")
-GetCodeStroke.Parent = GetCodeButton
-GetCodeStroke.Color = Color3.fromRGB(0, 80, 200)
-GetCodeStroke.Thickness = 2
-GetCodeStroke.Transparency = 0.5
-
-local NotificationFrame = Instance.new("Frame")
-NotificationFrame.Parent = Content
-NotificationFrame.BackgroundTransparency = 1
-NotificationFrame.Size = UDim2.new(0.8, 0, 0, 30)
-NotificationFrame.Position = UDim2.new(0.1, 0, 0.65, 0)
-NotificationFrame.Visible = false
-
-local NotificationLabel = Instance.new("TextLabel")
-NotificationLabel.Parent = NotificationFrame
-NotificationLabel.BackgroundTransparency = 1
-NotificationLabel.Size = UDim2.new(1, 0, 1, 0)
-NotificationLabel.Font = Enum.Font.Gotham
-NotificationLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-NotificationLabel.TextSize = 14
-NotificationLabel.TextTransparency = 1
-NotificationLabel.Text = ""
-NotificationLabel.TextWrapped = true
-
-local LoadingCircle = Instance.new("Frame")
-LoadingCircle.Name = "LoadingCircle"
-LoadingCircle.Parent = Content
-LoadingCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-LoadingCircle.BackgroundTransparency = 1
-LoadingCircle.Position = UDim2.new(0.5, 0, 0.35, 0)
-LoadingCircle.Size = UDim2.new(0, 40, 0, 40)
-LoadingCircle.Visible = false
-
-local Circle1 = Instance.new("Frame")
-Circle1.Name = "Circle1"
-Circle1.Parent = LoadingCircle
-Circle1.AnchorPoint = Vector2.new(0.5, 0.5)
-Circle1.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-Circle1.Size = UDim2.new(0, 10, 0, 10)
-Circle1.Position = UDim2.new(0.5, 0, 0, 0)
-Circle1.BorderSizePixel = 0
-
-local UICorner_Circle1 = Instance.new("UICorner")
-UICorner_Circle1.CornerRadius = UDim.new(1, 0)
-UICorner_Circle1.Parent = Circle1
-
-local Circle2 = Instance.new("Frame")
-Circle2.Name = "Circle2"
-Circle2.Parent = LoadingCircle
-Circle2.AnchorPoint = Vector2.new(0.5, 0.5)
-Circle2.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-Circle2.Size = UDim2.new(0, 10, 0, 10)
-Circle2.Position = UDim2.new(0.5, 0, 0, 0)
-Circle2.BorderSizePixel = 0
-
-local UICorner_Circle2 = Instance.new("UICorner")
-UICorner_Circle2.CornerRadius = UDim.new(1, 0)
-UICorner_Circle2.Parent = Circle2
-
-local function createHoverEffect(button, stroke)
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 140, 255),
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        }):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 100, 220),
-            Thickness = 3,
-            Transparency = 0.2
-        }):Play()
-    end)
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            BackgroundColor3 = Color3.fromRGB(0, 120, 255),
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        }):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {
-            Color = Color3.fromRGB(0, 80, 200),
-            Thickness = 2,
-            Transparency = 0.5
-        }):Play()
-    end)
+local function showStats()
+    local successRate = performanceData.attempts > 0 and (performanceData.successes / performanceData.attempts * 100) or 0
+    print("═══════════════════════════════════════")
+    print("📈 ESTADÍSTICAS TWEEN STEAL QUANTUM ULTRA")
+    print("═══════════════════════════════════════")
+    print(string.format("🎯 Intentos totales: %d", performanceData.attempts))
+    print(string.format("✅ Éxitos: %d", performanceData.successes))
+    print(string.format("📊 Tasa de éxito: %.1f%%", successRate))
+    print(string.format("⚡ Mejor tiempo: %.2fs", performanceData.bestTime == math.huge and 0 or performanceData.bestTime))
+    print(string.format("📈 Tiempo promedio: %.2fs", performanceData.avgTime))
+    print(string.format("🕐 Último tiempo: %.2fs", performanceData.lastExecutionTime))
+    print("═══════════════════════════════════════")
 end
 
-createHoverEffect(SubmitButton, SubmitStroke)
-createHoverEffect(GetCodeButton, GetCodeStroke)
-
-task.wait(0.1)
-TweenService:Create(Blur, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = 15}):Play()
-TweenService:Create(Frame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 450, 0, 320),
-    BackgroundTransparency = 0
-}):Play()
-DropShadow.Visible = true
-TweenService:Create(DropShadow, TweenInfo.new(0.6), {ImageTransparency = 0.6}):Play()
-
-task.wait(0.3)
-TweenService:Create(TitleLabel, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(CloseButton, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(MinimizeButton, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-
-task.wait(0.2)
-TweenService:Create(InputBox, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-    TextTransparency = 0,
-    PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
-}):Play()
-TweenService:Create(InputStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-
-task.wait(0.2)
-TweenService:Create(SubmitButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-TweenService:Create(SubmitStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-TweenService:Create(GetCodeButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-TweenService:Create(GetCodeStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-
-GetCodeButton.MouseButton1Click:Connect(function()
-    setclipboard(discordLink)
-    NotificationFrame.Visible = true
-    NotificationLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-    NotificationLabel.Text = "Discord link copied to clipboard!"
-    TweenService:Create(NotificationLabel, TweenInfo.new(0.3), {
-        TextTransparency = 0
-    }):Play()
-    task.wait(2)
-    TweenService:Create(NotificationLabel, TweenInfo.new(0.3), {
-        TextTransparency = 1
-    }):Play()
-    task.wait(0.3)
-    NotificationFrame.Visible = false
-    NotificationLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-end)
-
-local isMinimized = false
-local originalSize = UDim2.new(0, 450, 0, 320)
-local minimizedSize = UDim2.new(0, 200, 0, 40)
-
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    local targetSize = isMinimized and minimizedSize or originalSize
-    local contentTransparency = isMinimized and 1 or 0
+-- Configurar controles
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
     
-    TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Size = targetSize,
-        BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-    }):Play()
-    
-    TweenService:Create(Content, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Visible = not isMinimized
-    }):Play()
-    
-    TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-        ImageTransparency = 0.6,
-        Visible = true
-    }):Play()
-    
-    TweenService:Create(InputBox, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency,
-        BackgroundTransparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(InputStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Transparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(SubmitButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency,
-        BackgroundTransparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(SubmitStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Transparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(GetCodeButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        TextTransparency = contentTransparency,
-        BackgroundTransparency = contentTransparency
-    }):Play()
-    
-    TweenService:Create(GetCodeStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Transparency = contentTransparency
-    }):Play()
-    
-    MinimizeButton.Text = isMinimized and "□" or "—"
-end)
-
-SubmitButton.MouseButton1Click:Connect(function()
-    local userInput = string.lower(InputBox.Text or "")
-    
-    if userInput == key then
-        SubmitButton.Visible = false
-        GetCodeButton.Visible = false
-        LoadingCircle.Visible = true
-        
-        local angle = 0
-        local connection
-        connection = RunService.Heartbeat:Connect(function(delta)
-            angle = (angle + delta * 10) % (2 * math.pi)
-            Circle1.Position = UDim2.new(0.5 + math.cos(angle) * 0.4, 0, 0.5 + math.sin(angle) * 0.4, 0)
-            Circle2.Position = UDim2.new(0.5 + math.cos(angle + math.pi) * 0.4, 0, 0.5 + math.sin(angle + math.pi) * 0.4, 0)
-        end)
-        
-        task.wait(1.2)
-        connection:Disconnect()
-        
-        TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-            Size = UDim2.new(0, 0, 0, 0),
-            BackgroundTransparency = 1
-        }):Play()
-        
-        TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-        
-        task.wait(0.4)
-        ScreenGui:Destroy()
-        Blur:Destroy()
-        print("[MoonHub]: MoonBlur destroyed")
-        local success, errorMsg = pcall(function()
-            local func = loadstring(scriptToLoad)
-            if not func then
-                error("Failed to compile scriptToLoad")
-            end
-            func()
-        end)
-        if not success then
-            warn("[MoonHub ERROR]: Failed to execute scriptToLoad: " .. tostring(errorMsg))
-        else
-            print("[MoonHub]: Successfully executed scriptToLoad")
-        end
-    else
-        NotificationFrame.Visible = true
-        NotificationLabel.Text = "Invalid code, please try again"
-        
-        TweenService:Create(NotificationLabel, TweenInfo.new(0.3), {
-            TextTransparency = 0
-        }):Play()
-        
-        local shakeTime = 0.4
-        for i = 1, 3 do
-            TweenService:Create(InputBox, TweenInfo.new(shakeTime/6), {Position = UDim2.new(0.1, -5, 0.15, 0)}):Play()
-            task.wait(shakeTime/6)
-            TweenService:Create(InputBox, TweenInfo.new(shakeTime/6), {Position = UDim2.new(0.1, 5, 0.15, 0)}):Play()
-            task.wait(shakeTime/6)
-        end
-        TweenService:Create(InputBox, TweenInfo.new(shakeTime/6), {Position = UDim2.new(0.1, 0, 0.15, 0)}):Play()
-        InputBox.Text = ""
-        TweenService:Create(InputStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(255, 80, 80)}):Play()
-        
-        task.wait(2)
-        TweenService:Create(NotificationLabel, TweenInfo.new(0.3), {
-            TextTransparency = 1
-        }):Play()
-        TweenService:Create(InputStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 70)}):Play()
-        task.wait(0.3)
-        NotificationFrame.Visible = false
+    if input.KeyCode == Enum.KeyCode.T then
+        TweenStealQuantumUltra()
+    elseif input.KeyCode == Enum.KeyCode.G then
+        showStats()
+    elseif input.KeyCode == Enum.KeyCode.H then
+        print("═══════════════════════════════════════")
+        print("🎮 CONTROLES TWEEN STEAL QUANTUM ULTRA")
+        print("═══════════════════════════════════════")
+        print("T - Ejecutar TweenSteal Quantum Ultra")
+        print("G - Mostrar estadísticas detalladas")
+        print("H - Mostrar esta ayuda")
+        print("═══════════════════════════════════════")
     end
 end)
 
-CloseButton.MouseButton1Click:Connect(function()
-    TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-        Size = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-    task.wait(0.4)
-    ScreenGui:Destroy()
-    Blur:Destroy()
-end)
+-- ═══════════════════════════════════════════════════════════════
+--                           INICIALIZACIÓN
+-- ═══════════════════════════════════════════════════════════════
 
-local isGuiVisible = true
-UIS.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        isGuiVisible = not isGuiVisible
-        if isGuiVisible then
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = isMinimized and minimizedSize or originalSize,
-                BackgroundColor3 = Color3.fromRGB(10, 10, 15),
-                BackgroundTransparency = 0
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 15}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {
-                ImageTransparency = 0.6,
-                Visible = true
-            }):Play()
-            TweenService:Create(Content, TweenInfo.new(0.4), {
-                Visible = not isMinimized
-            }):Play()
-            if not isMinimized then
-                TweenService:Create(InputBox, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                    TextTransparency = 0,
-                    BackgroundTransparency = 0
-                }):Play()
-                TweenService:Create(InputStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-                TweenService:Create(SubmitButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                    TextTransparency = 0,
-                    BackgroundTransparency = 0
-                }):Play()
-                TweenService:Create(SubmitStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-                TweenService:Create(GetCodeButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                    TextTransparency = 0,
-                    BackgroundTransparency = 0
-                }):Play()
-                TweenService:Create(GetCodeStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-            end
-        else
-            TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-                Size = UDim2.new(0, 0, 0, 0),
-                BackgroundTransparency = 1
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {Size = 0}):Play()
-            TweenService:Create(DropShadow, TweenInfo.new(0.4), {ImageTransparency = 1}):Play()
-        end
-    end
-end)
+print("╔══════════════════════════════════════════════════════════════╗")
+print("║              🚀 TWEEN STEAL QUANTUM ULTRA V3.0 🚀            ║")
+print("║                      ¡CARGADO EXITOSAMENTE!                 ║")
+print("╠══════════════════════════════════════════════════════════════╣")
+print("║  🎮 Controles:                                              ║")
+print("║  • T - Ejecutar TweenSteal Quantum Ultra                    ║")
+print("║  • G - Mostrar estadísticas                                 ║")
+print("║  • H - Mostrar ayuda                                        ║")
+print("║                                                              ║")
+print("║  ⚡ Mejoras Ultra:                                           ║")
+print("║  • Algoritmo cuántico de movimiento                         ║")
+print("║  • Anti-detección avanzada                                  ║")
+print("║  • Optimización automática                                  ║")
+print("║  • Teleport en ráfagas múltiples                           ║")
+print("║  • Sistema de estadísticas                                  ║")
+print("╚══════════════════════════════════════════════════════════════╝")
 
-local dragging = false
-local dragInput, dragStart, startPos
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        local goal = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-        Frame:TweenPosition(goal, Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.05, true)
-    end
-end)
+-- Auto-ejecutar una vez para demostrar (opcional, comentar si no se desea)
+-- task.wait(2)
+-- print("🎯 Ejecutando demostración automática...")
+-- TweenStealQuantumUltra() 
