@@ -515,7 +515,7 @@ local minimizedSize = UDim2.new(0, 120, 0, 40)
 
 -- Variables para drag personalizado en modo minimizado
 local isDraggingMinimized = false
-local lastMinimizedPosition = UDim2.new(0.5, 0, 0.5, 0)
+local lastMinimizedPosition = UDim2.new(1, -140, 0, 20)
 
 MinimizeButton.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -529,14 +529,14 @@ MinimizeButton.MouseButton1Click:Connect(function()
     
     -- Hacer la ventana minimizada más visible y estilizada
     if isMinimized then
-        -- Posición más accesible cuando se minimiza
-        Frame.Position = UDim2.new(0, 20, 0, 100)
+        -- Posición en la esquina superior derecha cuando se minimiza
+        Frame.Position = UDim2.new(1, -140, 0, 20)
         
         -- Estilo especial para ventana minimizada tipo botón
     TweenService:Create(Frame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
         Size = targetSize,
             BackgroundColor3 = Color3.fromRGB(30, 30, 40),
-            Position = UDim2.new(0, 20, 0, 20)
+            Position = UDim2.new(1, -140, 0, 20)
     }):Play()
     
         -- Hacer la barra de título igual al fondo para que parezca un botón
