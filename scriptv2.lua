@@ -717,6 +717,7 @@ HumanizedButton.Text = "HUMANITED"
 HumanizedButton.TextSize = 16
 HumanizedButton.TextWrapped = true
 HumanizedButton.TextTransparency = 1
+HumanizedButton.BackgroundTransparency = 1
 HumanizedButton.AutoButtonColor = false
 
 local UICorner_Humanized = Instance.new("UICorner")
@@ -727,7 +728,7 @@ local HumanizedStroke = Instance.new("UIStroke")
 HumanizedStroke.Parent = HumanizedButton
 HumanizedStroke.Color = Color3.fromRGB(0, 150, 80)
 HumanizedStroke.Thickness = 2
-HumanizedStroke.Transparency = 0.5
+HumanizedStroke.Transparency = 1
 
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Name = "InfoLabel"
@@ -805,17 +806,19 @@ TweenService:Create(CloseButton, TweenInfo.new(0.4), {TextTransparency = 0}):Pla
 TweenService:Create(MinimizeButton, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
 
 task.wait(0.2)
+-- Animar ambos botones simultáneamente
 TweenService:Create(TweenStealButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
     TextTransparency = 0,
     BackgroundTransparency = 0
 }):Play()
-TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+TweenService:Create(TweenStealStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
 
+task.wait(0.1)
 TweenService:Create(HumanizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
     TextTransparency = 0,
     BackgroundTransparency = 0
 }):Play()
-TweenService:Create(HumanizedStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+TweenService:Create(HumanizedStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
 
 task.wait(0.1)
 TweenService:Create(InfoLabel, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
